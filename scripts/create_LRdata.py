@@ -30,7 +30,7 @@ def main(args) -> None:
     image_file_names = os.listdir(args.images_dir)
 
     # Splitting images with multiple threads
-    progress_bar = tqdm(total=len(image_file_names), unit="image", desc="Prepare split image")
+    progress_bar = tqdm(total=len(image_file_names), unit="image", desc="Resize image")
     workers_pool = multiprocessing.Pool(args.num_workers)
     for image_file_name in image_file_names:
         workers_pool.apply_async(worker, args=(image_file_name, args), callback=lambda arg: progress_bar.update(1))
@@ -41,12 +41,13 @@ def main(args) -> None:
 
 def worker(image_file_name, args) -> None:
     image = cv2.imread(f"{args.images_dir}/{image_file_name}", cv2.IMREAD_UNCHANGED)
-    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = cv2.resize(image, (image.shape[1] // args.upscale_factor, image.shape[0] // args.upscale_factor),
+    height, width = image.shape[0:2]
+    newsameH, newsameW = (height//args.upscale_factor)*args.upscale_factor, (width//args.upscale_factor)*args.upscale_factor
+    image_original = cv2.resize(image, (newsameW, newsameH), interpolation=cv2.INTER_CUBIC)
+    image_scale = cv2.resize(image_original, (newsameW//args.upscale_factor, newsameH//args.upscale_factor),
                        interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite(f"{args.output_dir}/{image_file_name}", image)
-
-
+    cv2.imwrite(f"{args.images_dir}/{image_file_name}", image_original)
+    cv2.imwrite(f"{args.output_dir}/{image_file_name}", image_scale)
 
 
 if __name__ == "__main__":
