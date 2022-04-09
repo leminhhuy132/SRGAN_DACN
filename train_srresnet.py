@@ -30,7 +30,7 @@ import imgproc
 from dataset import CUDAPrefetcher
 from dataset import TrainValidImageDataset, TestImageDataset
 from model import Generator
-
+import matplotlib.pyplot as plt
 
 def main():
     # Initialize training to generate network evaluation indicators
@@ -230,7 +230,12 @@ def train(model,
 
         # After a batch of data is calculated, add 1 to the number of batches
         batch_index += 1
-
+    # plot
+    plt.plot(his_psnr)
+    plt.legend('train_psnr', 'valid_psnr', 'test_psnr')
+    plt.xlabel('Iter')
+    plt.ylabel('Psnr score')
+    plt.savefig(os.path.join(samples_dir, 'plot.png'))
 
 def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> float:
     batch_time = AverageMeter("Time", ":6.3f")

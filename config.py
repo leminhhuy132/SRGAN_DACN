@@ -34,18 +34,19 @@ exp_name = "SRResNet_baseline"
 
 if mode == "train_srresnet":
     # Dataset address
-    train_image_dir = "data/ImageNet/SRGAN/train"
-    valid_image_dir = "data/ImageNet/SRGAN/valid"
-    test_lr_image_dir = f"data/Set5/LRbicx{upscale_factor}"
-    test_hr_image_dir = f"data/Set5/GTmod12"
+    train_image_dir = "data/Textdata/train"
+    valid_image_dir = "data/Textdata/train"
+    test_lr_image_dir = f"data/Textdata/testx4"
+    test_hr_image_dir = f"data/Textdata/test"
+
 
     image_size = 96
     batch_size = 16
-    num_workers = 4
+    num_workers = 2
 
     # Incremental training and migration training
     start_epoch = 0
-    resume = ""
+    resume = "results/SRGAN/srresnet-ImageNet-dbebcec6.pth.tar"
 
     # Total num epochs
     epochs = 45
@@ -58,20 +59,20 @@ if mode == "train_srresnet":
 
 if mode == "train_srgan":
     # Dataset address
-    train_image_dir = "data/ImageNet/SRGAN/train"
-    valid_image_dir = "data/ImageNet/SRGAN/valid"
-    test_lr_image_dir = f"data/Set5/LRbicx{upscale_factor}"
-    test_hr_image_dir = f"data/Set5/GTmod12"
+    train_image_dir = "data/Textdata/train"
+    valid_image_dir = "data/Textdata/train"
+    test_lr_image_dir = f"data/Textdata/testx4"
+    test_hr_image_dir = f"data/Textdata/test"
 
     image_size = 96
     batch_size = 16
-    num_workers = 4
+    num_workers = 2
 
     # Incremental training and migration training
     start_epoch = 0
-    resume = "results/SRResNet_baseline/g_best.pth.tar"
-    resume_d = ""
-    resume_g = ""
+    resume = "results/SRGAN/srresnet-ImageNet-dbebcec6.pth.tar"
+    resume_d = "results/SRGAN/discriminator-ImageNet-6113867a.pth.tar"
+    resume_g = "results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
 
     # Total num epochs
     epochs = 9
@@ -93,8 +94,8 @@ if mode == "train_srgan":
 
 if mode == "valid":
     # Test data address
-    lr_dir = f"data/Set5/LRbicx{upscale_factor}"
-    sr_dir = f"results/test/{exp_name}"
-    hr_dir = f"data/Set5/GTmod12"
+    lr_dir = f"data/Textdata/test"
+    sr_dir = f"results/test/TEXT/{exp_name}"
+    hr_dir = f"data/Textdata/test"
 
-    model_path = f"results/{exp_name}/g_best.pth.tar"
+    model_path = f"results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
