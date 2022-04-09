@@ -98,6 +98,8 @@ def main():
                    os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
         if is_best:
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
+            shutil.rmtree(samples_dir)
+            os.makedirs(samples_dir)
         if (epoch + 1) == config.epochs:
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
 

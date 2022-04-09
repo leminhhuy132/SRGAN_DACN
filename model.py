@@ -210,3 +210,112 @@ class ContentLoss(nn.Module):
         loss = F.l1_loss(self.feature_extractor(sr), self.feature_extractor(hr))
 
         return loss
+
+# by Bruno_Oliveira
+class VGG(nn.Module):
+    def __init__(self, bn=False, loss_config='VGG54', pretrained=True):
+        super(VGG, self).__init__()
+        blocks = []
+        if loss_config == 'VGG54':
+            if not bn:
+                blocks.append(models.vgg19(pretrained=pretrained).features[:4].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[4:9].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[9:18].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[18:27].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[27:36].eval())
+            else:
+                blocks.append(models.vgg19(pretrained=pretrained).features[:6].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[6:13].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[13:26].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[26:39].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[39:52].eval())
+
+        elif loss_config == 'VGG22':
+            if not bn:
+                blocks.append(models.vgg19(pretrained=pretrained).features[:4].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[4:9].eval())
+            else:
+                blocks.append(models.vgg19(pretrained=pretrained).features[:6].eval())
+                blocks.append(models.vgg19(pretrained=pretrained).features[6:13].eval())
+
+        blocks = nn.ModuleList(blocks)
+
+        if pretrained:
+            for param in blocks.parameters():
+                param.requires_grad = False
+
+        self.blocks = blocks
+
+        mean = torch.Tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+        std = torch.Tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+        self.register_buffer('mean', mean)
+        self.register_buffer('std', std)
+
+    def forward(self, x):
+        output = []
+        x = (x - self.mean) / self.std
+        for block in self.blocks:
+            x = block(x).div(12.75)
+            output.append(x)
+        return output
+
+# print('D:')
+    # for param in discriminator.parameters():
+    #   print(type(param), param.size())
+    # print('G:')
+    # for param in discriminator.parameters():
+    #   print(type(param), param.size())
+# D:
+# <class 'torch.nn.parameter.Parameter'> torch.Size([64, 3, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([64, 64, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([64])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([64])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128, 64, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128, 128, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256, 128, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256, 256, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512, 256, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512, 512, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([1024, 18432])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([1024])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([1, 1024])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([1])
+# G:
+# <class 'torch.nn.parameter.Parameter'> torch.Size([64, 3, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([64, 64, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([64])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([64])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128, 64, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128, 128, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([128])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256, 128, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256, 256, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([256])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512, 256, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512, 512, 3, 3])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([512])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([1024, 18432])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([1024])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([1, 1024])
+# <class 'torch.nn.parameter.Parameter'> torch.Size([1])

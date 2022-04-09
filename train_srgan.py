@@ -31,7 +31,7 @@ import imgproc
 from dataset import CUDAPrefetcher
 from dataset import TrainValidImageDataset, TestImageDataset
 from model import Discriminator, Generator, ContentLoss
-
+import matplotlib.pyplot as plt
 
 def main():
     # Initialize training to generate network evaluation indicators
@@ -49,7 +49,7 @@ def main():
     d_optimizer, g_optimizer = define_optimizer(discriminator, generator)
     print("Define all optimizer functions successfully.")
 
-    d_scheduler, g_scheduler = define_optimizer(discriminator, generator)
+    d_scheduler, g_scheduler = define_scheduler(discriminator, generator)
     print("Define all optimizer scheduler functions successfully.")
 
     if config.resume:
@@ -113,21 +113,23 @@ def main():
     # Initialize the gradient scaler.
     scaler = amp.GradScaler()
 
+    his_psnr = []
     for epoch in range(config.start_epoch, config.epochs):
-        train(discriminator,
-              generator,
-              train_prefetcher,
-              psnr_criterion,
-              pixel_criterion,
-              content_criterion,
-              adversarial_criterion,
-              d_optimizer,
-              g_optimizer,
-              epoch,
-              scaler,
-              writer)
-        _ = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
-        psnr = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
+        train_psnr = train(discriminator,
+                  generator,
+                  train_prefetcher,
+                  psnr_criterion,
+                  pixel_criterion,
+                  content_criterion,
+                  adversarial_criterion,
+                  d_optimizer,
+                  g_optimizer,
+                  epoch,
+                  scaler,
+                  writer)
+        valid_psnr = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
+        test_psnr = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
+        his_psnr.append([train_psnr, valid_psnr, test_psnr])
         print("\n")
 
         # Update LR
@@ -135,27 +137,37 @@ def main():
         g_scheduler.step()
 
         # Automatically save the model with the highest index
-        is_best = psnr > best_psnr
-        best_psnr = max(psnr, best_psnr)
+        is_best = test_psnr > best_psnr
+        best_psnr = max(test_psnr, best_psnr)
         torch.save({"epoch": epoch + 1,
                     "best_psnr": best_psnr,
                     "state_dict": discriminator.state_dict(),
                     "optimizer": d_optimizer.state_dict(),
-                    "scheduler": d_scheduler.state_dict()},
+                    "scheduler": d_scheduler.state_dict()
+                    },
                    os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"))
         torch.save({"epoch": epoch + 1,
                     "best_psnr": best_psnr,
                     "state_dict": generator.state_dict(),
                     "optimizer": g_optimizer.state_dict(),
-                    "scheduler": g_scheduler.state_dict()},
+                    "scheduler": g_scheduler.state_dict()
+                    },
                    os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
         if is_best:
             shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_best.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
+            shutil.rmtree(samples_dir)
+            os.makedirs(samples_dir)
         if (epoch + 1) == config.epochs:
             shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
 
+    # plot
+    plt.plot(his_psnr)
+    plt.legend('train_psnr','valid_psnr', 'test_psnr')
+    plt.xlabel('Iter')
+    plt.ylabel('Psnr score')
+    plt.savefig(os.path.join(samples_dir, 'plot.png'))
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
@@ -235,7 +247,7 @@ def train(discriminator,
           g_optimizer,
           epoch,
           scaler,
-          writer) -> None:
+          writer) -> float:
     # Calculate how many iterations there are under epoch
     batches = len(train_prefetcher)
 
@@ -368,7 +380,7 @@ def train(discriminator,
 
         # After a batch of data is calculated, add 1 to the number of batches
         batch_index += 1
-
+    return psnres.avg
 
 def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> float:
     batch_time = AverageMeter("Time", ":6.3f")

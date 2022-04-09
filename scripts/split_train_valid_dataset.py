@@ -32,7 +32,7 @@ def main(args) -> None:
 
     for image_file_name in process_bar:
         shutil.copyfile(f"{args.train_images_dir}/{image_file_name}", f"{args.valid_images_dir}/{image_file_name}")
-
+        os.remove(f"{args.train_images_dir}/{image_file_name}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Split train and valid dataset scripts.")

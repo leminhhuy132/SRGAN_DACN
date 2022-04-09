@@ -78,7 +78,7 @@ if mode == "train_srgan":
 
     # Loss function weight
     pixel_weight = 1.0
-    content_weight = 1.0
+    content_weight = 0.006
     adversarial_weight = 0.001
 
     # Adam optimizer parameter
