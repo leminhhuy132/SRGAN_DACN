@@ -60,7 +60,7 @@ if mode == "train_srresnet":
 if mode == "train_srgan":
     # Dataset address
     train_image_dir = "data/Textdata/train"
-    valid_image_dir = "data/Textdata/train"
+    valid_image_dir = "data/Textdata/valid"
     test_lr_image_dir = f"data/Textdata/testx4"
     test_hr_image_dir = f"data/Textdata/test"
 

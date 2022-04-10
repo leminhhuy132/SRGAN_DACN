@@ -32,6 +32,7 @@ from dataset import CUDAPrefetcher
 from dataset import TrainValidImageDataset, TestImageDataset
 from model import Discriminator, Generator, ContentLoss
 import matplotlib.pyplot as plt
+from pytorch_ssim import SSIM
 
 def main():
     # Initialize training to generate network evaluation indicators
@@ -75,8 +76,7 @@ def main():
         # Load the optimizer model
         d_optimizer.load_state_dict(checkpoint["optimizer"])
         # Load the scheduler model
-        if checkpoint["scheduler"] is not None:
-            d_scheduler.load_state_dict(checkpoint["scheduler"])
+        d_scheduler.load_state_dict(checkpoint["scheduler"])
         print("Loaded pretrained discriminator model weights.")
 
     print("Check whether the pretrained generator model is restored...")
@@ -95,8 +95,7 @@ def main():
         # Load the optimizer model
         g_optimizer.load_state_dict(checkpoint["optimizer"])
         # Load the scheduler model
-        if checkpoint["scheduler"] is not None:
-            g_scheduler.load_state_dict(checkpoint["scheduler"])
+        g_scheduler.load_state_dict(checkpoint["scheduler"])
         print("Loaded pretrained generator model weights.")
 
     # Create a folder of super-resolution experiment results
@@ -114,8 +113,9 @@ def main():
     scaler = amp.GradScaler()
 
     his_psnr = []
+    his_ssim = []
     for epoch in range(config.start_epoch, config.epochs):
-        train_psnr = train(discriminator,
+        train_psnr, train_ssim = train(discriminator,
                   generator,
                   train_prefetcher,
                   psnr_criterion,
@@ -127,9 +127,10 @@ def main():
                   epoch,
                   scaler,
                   writer)
-        valid_psnr = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
-        test_psnr = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
+        valid_psnr, valid_ssim = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
+        test_psnr, test_ssim = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
         his_psnr.append([train_psnr, valid_psnr, test_psnr])
+        his_ssim.append([train_ssim, valid_ssim, test_ssim])
         print("\n")
 
         # Update LR
@@ -139,41 +140,50 @@ def main():
         # Automatically save the model with the highest index
         is_best = test_psnr > best_psnr
         best_psnr = max(test_psnr, best_psnr)
-        torch.save({"epoch": epoch + 1,
+        
+        if is_best:
+            torch.save({"epoch": epoch + 1,
                     "best_psnr": best_psnr,
                     "state_dict": discriminator.state_dict(),
                     "optimizer": d_optimizer.state_dict(),
                     "scheduler": d_scheduler.state_dict()
                     },
                    os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"))
-        torch.save({"epoch": epoch + 1,
+            torch.save({"epoch": epoch + 1,
                     "best_psnr": best_psnr,
                     "state_dict": generator.state_dict(),
                     "optimizer": g_optimizer.state_dict(),
                     "scheduler": g_scheduler.state_dict()
                     },
                    os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
-        if is_best:
             shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_best.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
-            shutil.rmtree(samples_dir)
-            os.makedirs(samples_dir)
+            # shutil.rmtree(samples_dir)
+            # os.makedirs(samples_dir)
         if (epoch + 1) == config.epochs:
             shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
 
     # plot
+    plt.figure(1)
     plt.plot(his_psnr)
-    plt.legend('train_psnr','valid_psnr', 'test_psnr')
+    plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
     plt.xlabel('Iter')
-    plt.ylabel('Psnr score')
-    plt.savefig(os.path.join(samples_dir, 'plot.png'))
+    plt.ylabel('PSNR score')
+    plt.savefig(os.path.join(samples_dir, 'psnr.png'))
+
+    plt.figure(2)
+    plt.plot(his_ssim)
+    plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
+    plt.xlabel('Iter')
+    plt.ylabel('SSIM score')
+    plt.savefig(os.path.join(samples_dir, 'ssim.png'))
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
     train_datasets = TrainValidImageDataset(config.train_image_dir, config.image_size, config.upscale_factor, "Train")
     valid_datasets = TrainValidImageDataset(config.valid_image_dir, config.image_size, config.upscale_factor, "Valid")
-    test_datasets = TestImageDataset(config.test_lr_image_dir, config.test_hr_image_dir, config.upscale_factor)
+    test_datasets = TestImageDataset(config.test_lr_image_dir, config.test_hr_image_dir)
 
     # Generator all dataloader
     train_dataloader = DataLoader(train_datasets,
@@ -259,11 +269,12 @@ def train(discriminator,
     d_hr_probabilities = AverageMeter("D(HR)", ":6.3f")
     d_sr_probabilities = AverageMeter("D(SR)", ":6.3f")
     psnres = AverageMeter("PSNR", ":4.2f")
+    ssimes = AverageMeter("SSIM", ":4.2f")
     progress = ProgressMeter(batches,
                              [batch_time, data_time,
                               pixel_losses, content_losses, adversarial_losses,
                               d_hr_probabilities, d_sr_probabilities,
-                              psnres],
+                              psnres, ssimes],
                              prefix=f"Epoch: [{epoch + 1}]")
 
     # Put all model in train mode.
@@ -358,6 +369,9 @@ def train(discriminator,
         d_sr_probabilities.update(d_sr_probability.item(), lr.size(0))
         psnres.update(psnr.item(), lr.size(0))
 
+        ssim = SSIM(sr, hr)
+        ssimes.update(ssim.item(), lr.size(0))
+
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
@@ -380,11 +394,12 @@ def train(discriminator,
 
         # After a batch of data is calculated, add 1 to the number of batches
         batch_index += 1
-    return psnres.avg
+    return psnres.avg, ssimes.avg
 
 def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> float:
     batch_time = AverageMeter("Time", ":6.3f")
     psnres = AverageMeter("PSNR", ":4.2f")
+    ssimes = AverageMeter("SSIM", ":4.2f")
     progress = ProgressMeter(len(valid_prefetcher), [batch_time, psnres], prefix="Valid: ")
 
     # Put the model in verification mode
@@ -423,6 +438,9 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
             psnr = 10. * torch.log10(1. / psnr_criterion(sr_y_tensor, hr_y_tensor))
             psnres.update(psnr.item(), lr.size(0))
 
+            ssim = SSIM(sr_y_tensor, hr_y_tensor)
+            ssimes.update(ssim.item(), lr.size(0))
+
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -440,14 +458,12 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
     # Print average PSNR metrics
     progress.display_summary()
 
-    if mode == "Valid":
-        writer.add_scalar("Valid/PSNR", psnres.avg, epoch + 1)
-    elif mode == "Test":
-        writer.add_scalar("Test/PSNR", psnres.avg, epoch + 1)
+    if mode == "Valid" or mode == "Test":
+        writer.add_scalar(f"{mode}/PSNR", psnres.avg, epoch + 1)
     else:
         raise ValueError("Unsupported mode, please use `Valid` or `Test`.")
 
-    return psnres.avg
+    return psnres.avg, ssimes.avg
 
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
