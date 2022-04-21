@@ -400,7 +400,7 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
     batch_time = AverageMeter("Time", ":6.3f")
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.2f")
-    progress = ProgressMeter(len(valid_prefetcher), [batch_time, psnres], prefix="Valid: ")
+    progress = ProgressMeter(len(valid_prefetcher), [batch_time, psnres, ssimes], prefix="Valid: ")
 
     # Put the model in verification mode
     model.eval()
