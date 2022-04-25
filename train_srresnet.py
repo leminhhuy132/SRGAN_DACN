@@ -27,8 +27,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import config
 import imgproc
-from dataset import CUDAPrefetcher
-from dataset import TrainValidImageDataset, TestImageDataset
+from dataset import CUDAPrefetcher, TrainValidImageDataset, TestImageDataset
 from model import Generator
 import matplotlib.pyplot as plt
 from pytorch_ssim import ssim
@@ -162,7 +161,7 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
                                  num_workers=1,
                                  pin_memory=True,
                                  drop_last=False,
-                                 persistent_workers=False)
+                                 persistent_workers=True)
 
     # Place all data on the preprocessing data loader
     train_prefetcher = CUDAPrefetcher(train_dataloader, config.device)
@@ -178,8 +177,8 @@ def build_model() -> nn.Module:
 
 
 def define_loss() -> [nn.MSELoss, nn.MSELoss]:
-    psnr_criterion = nn.MSELoss().to(config.device)
-    pixel_criterion = nn.MSELoss().to(config.device)
+    psnr_criterion = nn.MSELoss().to(device=config.device)
+    pixel_criterion = nn.MSELoss().to(device=config.device)
     return psnr_criterion, pixel_criterion
 
 
@@ -220,11 +219,11 @@ def train(model,
         # measure data loading time
         data_time.update(time.time() - end)
 
-        lr = batch_data["lr"].to(config.device, non_blocking=True)
-        hr = batch_data["hr"].to(config.device, non_blocking=True)
+        lr = batch_data["lr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
+        hr = batch_data["hr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
 
         # Initialize the generator gradient
-        model.zero_grad()
+        model.zero_grad(set_to_none=True)
 
         # Mixed precision training
         with amp.autocast():
@@ -233,7 +232,6 @@ def train(model,
 
         # Gradient zoom
         scaler.scale(loss).backward()
-        scaler.unscale_(optimizer)
         # Update generator weight
         scaler.step(optimizer)
         scaler.update()
@@ -264,11 +262,11 @@ def train(model,
     return psnres.avg, ssimes.avg
 
 
-def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
+def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
     batch_time = AverageMeter("Time", ":6.3f")
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.2f")
-    progress = ProgressMeter(len(valid_prefetcher), [batch_time, psnres, ssimes], prefix="Valid: ")
+    progress = ProgressMeter(len(data_prefetcher), [batch_time, psnres, ssimes], prefix="Valid: ")
 
     # Put the model in verification mode
     model.eval()
@@ -279,28 +277,37 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> [f
     end = time.time()
     with torch.no_grad():
         # enable preload
-        valid_prefetcher.reset()
-        batch_data = valid_prefetcher.next()
+        data_prefetcher.reset()
+        batch_data = data_prefetcher.next()
 
         while batch_data is not None:
             # measure data loading time
-            lr = batch_data["lr"].to(config.device, non_blocking=True)
-            hr = batch_data["hr"].to(config.device, non_blocking=True)
+            lr = batch_data["lr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
+            hr = batch_data["hr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
 
             # Mixed precision
             with amp.autocast():
                 sr = model(lr)
 
-            # Convert RGB tensor to Y tensor
-            sr_image = imgproc.tensor2image(sr, range_norm=False, half=True)
-            sr_image = sr_image.astype(np.float32) / 255.
-            sr_y_image = imgproc.rgb2ycbcr(sr_image, use_y_channel=True)
-            sr_y_tensor = imgproc.image2tensor(sr_y_image, range_norm=False, half=True).to(config.device).unsqueeze_(0)
+            # Convert RGB tensor to RGB image
+            sr_image = imgproc.tensor2image(sr, range_norm=False, half=False)
+            hr_image = imgproc.tensor2image(hr, range_norm=False, half=False)
 
-            hr_image = imgproc.tensor2image(hr, range_norm=False, half=True)
+            # Data range 0~255 to 0~1
+            sr_image = sr_image.astype(np.float32) / 255.
             hr_image = hr_image.astype(np.float32) / 255.
+
+            # RGB convert Y
+            sr_y_image = imgproc.rgb2ycbcr(sr_image, use_y_channel=True)
             hr_y_image = imgproc.rgb2ycbcr(hr_image, use_y_channel=True)
-            hr_y_tensor = imgproc.image2tensor(hr_y_image, range_norm=False, half=True).to(config.device).unsqueeze_(0)
+
+            # Convert Y image to Y tensor
+            sr_y_tensor = imgproc.image2tensor(sr_y_image, range_norm=False, half=False).unsqueeze_(0)
+            hr_y_tensor = imgproc.image2tensor(hr_y_image, range_norm=False, half=False).unsqueeze_(0)
+
+            # Convert CPU tensor to CUDA tensor
+            sr_y_tensor = sr_y_tensor.to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
+            hr_y_tensor = hr_y_tensor.to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
 
             # measure accuracy and record loss
             psnr = 10. * torch.log10(1. / psnr_criterion(sr_y_tensor, hr_y_tensor))
@@ -318,7 +325,7 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> [f
                 progress.display(batch_index)
 
             # Preload the next batch of data
-            batch_data = valid_prefetcher.next()
+            batch_data = data_prefetcher.next()
 
             # After a batch of data is calculated, add 1 to the number of batches
             batch_index += 1

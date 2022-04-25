@@ -28,11 +28,10 @@ from torch.utils.tensorboard import SummaryWriter
 
 import config
 import imgproc
-from dataset import CUDAPrefetcher
-from dataset import TrainValidImageDataset, TestImageDataset
+from dataset import CUDAPrefetcher, TrainValidImageDataset, TestImageDataset
 from model import Discriminator, Generator, ContentLoss
 import matplotlib.pyplot as plt
-from pytorch_ssim import SSIM, ssim
+from pytorch_ssim import ssim
 
 def main():
     # Initialize training to generate network evaluation indicators
@@ -44,7 +43,7 @@ def main():
     discriminator, generator = build_model()
     print("Build SRGAN model successfully.")
 
-    psnr_criterion, pixel_criterion, content_criterion, adversarial_criterion = define_loss()
+    psnr_criterion, content_criterion, adversarial_criterion = define_loss()
     print("Define all loss functions successfully.")
 
     d_optimizer, g_optimizer = define_optimizer(discriminator, generator)
@@ -115,8 +114,17 @@ def main():
     his_psnr = []
     his_ssim = []
     for epoch in range(config.start_epoch, config.epochs):
-        train_psnr, train_ssim = train(discriminator, generator, train_prefetcher, psnr_criterion, pixel_criterion, content_criterion,
-                                       adversarial_criterion, d_optimizer, g_optimizer, epoch, scaler, writer)
+        train_psnr, train_ssim = train(discriminator,
+                                       generator,
+                                       train_prefetcher,
+                                       psnr_criterion,
+                                       content_criterion,
+                                       adversarial_criterion,
+                                       d_optimizer,
+                                       g_optimizer,
+                                       epoch,
+                                       scaler,
+                                       writer)
         valid_psnr, valid_ssim = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
         test_psnr, test_ssim = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
         his_psnr.append([train_psnr, valid_psnr, test_psnr])
@@ -210,7 +218,7 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
                                  num_workers=1,
                                  pin_memory=True,
                                  drop_last=False,
-                                 persistent_workers=False)
+                                 persistent_workers=True)
 
     # Place all data on the preprocessing data loader
     train_prefetcher = CUDAPrefetcher(train_dataloader, config.device)
@@ -221,17 +229,18 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
 
 
 def build_model() -> [nn.Module, nn.Module]:
-    discriminator = Discriminator().to(config.device)
-    generator = Generator().to(config.device)
+    discriminator = Discriminator().to(device=config.device, memory_format=torch.channels_last)
+    generator = Generator().to(device=config.device, memory_format=torch.channels_last)
     return discriminator, generator
 
 
-def define_loss() -> [nn.MSELoss, nn.MSELoss, ContentLoss, nn.BCEWithLogitsLoss]:
-    psnr_criterion = nn.MSELoss().to(config.device)
-    pixel_criterion = nn.MSELoss().to(config.device)
-    content_criterion = ContentLoss().to(config.device)
-    adversarial_criterion = nn.BCEWithLogitsLoss().to(config.device)
-    return psnr_criterion, pixel_criterion, content_criterion, adversarial_criterion
+def define_loss() -> [nn.MSELoss, ContentLoss, nn.BCEWithLogitsLoss]:
+    psnr_criterion = nn.MSELoss().to(device=config.device)
+    content_criterion = ContentLoss(config.feature_model_extractor_node,
+                                    config.feature_model_normalize_mean,
+                                    config.feature_model_normalize_std).to(device=config.device)
+    adversarial_criterion = nn.BCEWithLogitsLoss().to(device=config.device)
+    return psnr_criterion, content_criterion, adversarial_criterion
 
 
 def define_optimizer(discriminator: nn.Module, generator: nn.Module) -> [optim.Adam, optim.Adam]:
@@ -241,8 +250,8 @@ def define_optimizer(discriminator: nn.Module, generator: nn.Module) -> [optim.A
 
 
 def define_scheduler(d_optimizer: optim.Adam, g_optimizer: optim.Adam) -> [lr_scheduler.StepLR, lr_scheduler.StepLR]:
-    d_scheduler = lr_scheduler.StepLR(d_optimizer, config.optimizer_step_size, config.optimizer_gamma)
-    g_scheduler = lr_scheduler.StepLR(g_optimizer, config.optimizer_step_size, config.optimizer_gamma)
+    d_scheduler = lr_scheduler.StepLR(d_optimizer, config.lr_scheduler_step_size, config.lr_scheduler_gamma)
+    g_scheduler = lr_scheduler.StepLR(g_optimizer, config.lr_scheduler_step_size, config.lr_scheduler_gamma)
     return d_scheduler, g_scheduler
 
 
@@ -250,7 +259,6 @@ def train(discriminator,
           generator,
           train_prefetcher,
           psnr_criterion,
-          pixel_criterion,
           content_criterion,
           adversarial_criterion,
           d_optimizer,
@@ -263,7 +271,6 @@ def train(discriminator,
 
     batch_time = AverageMeter("Time", ":6.3f")
     data_time = AverageMeter("Data", ":6.3f")
-    pixel_losses = AverageMeter("Pixel loss", ":6.6f")
     content_losses = AverageMeter("Content loss", ":6.6f")
     adversarial_losses = AverageMeter("Adversarial loss", ":6.6f")
     d_hr_probabilities = AverageMeter("D(HR)", ":6.3f")
@@ -272,7 +279,7 @@ def train(discriminator,
     ssimes = AverageMeter("SSIM", ":4.2f")
     progress = ProgressMeter(batches,
                              [batch_time, data_time,
-                              pixel_losses, content_losses, adversarial_losses,
+                              content_losses, adversarial_losses,
                               d_hr_probabilities, d_sr_probabilities,
                               psnres, ssimes],
                              prefix=f"Epoch: [{epoch + 1}]")
@@ -300,16 +307,13 @@ def train(discriminator,
         real_label = torch.full([lr.size(0), 1], 1.0, dtype=lr.dtype, device=config.device)
         fake_label = torch.full([lr.size(0), 1], 0.0, dtype=lr.dtype, device=config.device)
 
-        # Use generators to create super-resolution images
-        sr = generator(lr)
-
         # Start training discriminator
-        # At this stage, the discriminator needs to require a derivative gradient
-        for p in discriminator.parameters():
-            p.requires_grad = True
+        # Make the gradient flow into the discriminator
+        for d_parameters in discriminator.parameters():
+            d_parameters.requires_grad = True
 
         # Initialize the discriminator optimizer gradient
-        d_optimizer.zero_grad()
+        discriminator.zero_grad(set_to_none=True)
 
         # Calculate the loss of the discriminator on the high-resolution image
         with amp.autocast():
@@ -319,8 +323,10 @@ def train(discriminator,
         scaler.scale(d_loss_hr).backward()
 
         # Calculate the loss of the discriminator on the super-resolution image.
+        # Use generators to create super-resolution images
         with amp.autocast():
-            sr_output = discriminator(sr.detach())
+            sr = generator(lr)
+            sr_output = discriminator(sr.detach().clone())
             d_loss_sr = adversarial_criterion(sr_output, fake_label)
         # Gradient zoom
         scaler.scale(d_loss_sr).backward()
@@ -329,25 +335,23 @@ def train(discriminator,
         scaler.update()
 
         # Count discriminator total loss
-        d_loss = d_loss_hr + d_loss_sr
+        d_loss = d_loss_sr + d_loss_hr
         # End training discriminator
 
         # Start training generator
-        # At this stage, the discriminator no needs to require a derivative gradient
-        for p in discriminator.parameters():
-            p.requires_grad = False
+        # Prevent gradients from flowing into the discriminator
+        for d_parameters in discriminator.parameters():
+            d_parameters.requires_grad = False
 
         # Initialize the generator optimizer gradient
-        g_optimizer.zero_grad()
+        generator.zero_grad(set_to_none=True)
 
         # Calculate the loss of the generator on the super-resolution image
         with amp.autocast():
-            output = discriminator(sr)
-            pixel_loss = config.pixel_weight * pixel_criterion(sr, hr.detach())
-            content_loss = config.content_weight * content_criterion(sr, hr.detach())
-            adversarial_loss = config.adversarial_weight * adversarial_criterion(output, real_label)
-        # Count discriminator total loss
-        g_loss = pixel_loss + content_loss + adversarial_loss
+            content_loss = config.content_weight * content_criterion(sr, hr)
+            adversarial_loss = config.adversarial_weight * adversarial_criterion(discriminator(sr), real_label)
+            # Count generator total loss
+            g_loss = content_loss + adversarial_loss
         # Gradient zoom
         scaler.scale(g_loss).backward()
         # Update generator parameters
@@ -357,12 +361,11 @@ def train(discriminator,
         # End training generator
 
         # Calculate the scores of the two images on the discriminator
-        d_hr_probability = torch.sigmoid(torch.mean(hr_output))
-        d_sr_probability = torch.sigmoid(torch.mean(sr_output))
+        d_hr_probability = torch.sigmoid_(torch.mean(hr_output.detach()))
+        d_sr_probability = torch.sigmoid_(torch.mean(sr_output.detach()))
 
         # measure accuracy and record loss
         psnr = 10. * torch.log10(1. / psnr_criterion(sr, hr))
-        pixel_losses.update(pixel_loss.item(), lr.size(0))
         content_losses.update(content_loss.item(), lr.size(0))
         adversarial_losses.update(adversarial_loss.item(), lr.size(0))
         d_hr_probabilities.update(d_hr_probability.item(), lr.size(0))
@@ -382,7 +385,6 @@ def train(discriminator,
             iters = batch_index + epoch * batches + 1
             writer.add_scalar("Train/D_Loss", d_loss.item(), iters)
             writer.add_scalar("Train/G_Loss", g_loss.item(), iters)
-            writer.add_scalar("Train/Pixel_Loss", pixel_loss.item(), iters)
             writer.add_scalar("Train/Content_Loss", content_loss.item(), iters)
             writer.add_scalar("Train/Adversarial_Loss", adversarial_loss.item(), iters)
             writer.add_scalar("Train/D(HR)_Probability", d_hr_probability.item(), iters)
@@ -396,11 +398,11 @@ def train(discriminator,
         batch_index += 1
     return psnres.avg, ssimes.avg
 
-def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
+def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
     batch_time = AverageMeter("Time", ":6.3f")
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.2f")
-    progress = ProgressMeter(len(valid_prefetcher), [batch_time, psnres, ssimes], prefix="Valid: ")
+    progress = ProgressMeter(len(data_prefetcher), [batch_time, psnres, ssimes], prefix="Valid: ")
 
     # Put the model in verification mode
     model.eval()
@@ -411,31 +413,40 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> [f
     end = time.time()
     with torch.no_grad():
         # enable preload
-        valid_prefetcher.reset()
-        batch_data = valid_prefetcher.next()
+        data_prefetcher.reset()
+        batch_data = data_prefetcher.next()
 
         while batch_data is not None:
             # measure data loading time
-            lr = batch_data["lr"].to(config.device, non_blocking=True)
-            hr = batch_data["hr"].to(config.device, non_blocking=True)
+            lr = batch_data["lr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
+            hr = batch_data["hr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
 
             # Mixed precision
             with amp.autocast():
                 sr = model(lr)
 
-            # Convert RGB tensor to Y tensor
-            sr_image = imgproc.tensor2image(sr, range_norm=False, half=True)
-            sr_image = sr_image.astype(np.float32) / 255.
-            sr_y_image = imgproc.rgb2ycbcr(sr_image, use_y_channel=True)
-            sr_y_tensor = imgproc.image2tensor(sr_y_image, range_norm=False, half=True).to(config.device).unsqueeze_(0)
+                # Convert RGB tensor to RGB image
+                sr_image = imgproc.tensor2image(sr, range_norm=False, half=False)
+                hr_image = imgproc.tensor2image(hr, range_norm=False, half=False)
 
-            hr_image = imgproc.tensor2image(hr, range_norm=False, half=True)
-            hr_image = hr_image.astype(np.float32) / 255.
-            hr_y_image = imgproc.rgb2ycbcr(hr_image, use_y_channel=True)
-            hr_y_tensor = imgproc.image2tensor(hr_y_image, range_norm=False, half=True).to(config.device).unsqueeze_(0)
+                # Data range 0~255 to 0~1
+                sr_image = sr_image.astype(np.float32) / 255.
+                hr_image = hr_image.astype(np.float32) / 255.
+
+                # RGB convert Y
+                sr_y_image = imgproc.rgb2ycbcr(sr_image, use_y_channel=True)
+                hr_y_image = imgproc.rgb2ycbcr(hr_image, use_y_channel=True)
+
+                # Convert Y image to Y tensor
+                sr_y_tensor = imgproc.image2tensor(sr_y_image, range_norm=False, half=False).unsqueeze_(0)
+                hr_y_tensor = imgproc.image2tensor(hr_y_image, range_norm=False, half=False).unsqueeze_(0)
+
+                # Convert CPU tensor to CUDA tensor
+                sr_y_tensor = sr_y_tensor.to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
+                hr_y_tensor = hr_y_tensor.to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
 
             # measure accuracy and record loss
-            psnr = 10. * torch.log10(1. / psnr_criterion(sr_y_tensor, hr_y_tensor))
+            psnr = 10. * torch.log10_(1. / psnr_criterion(sr_y_tensor, hr_y_tensor))
             psnres.update(psnr.item(), lr.size(0))
 
             ssim_score = ssim(sr_y_tensor, hr_y_tensor)
@@ -450,7 +461,7 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> [f
                 progress.display(batch_index)
 
             # Preload the next batch of data
-            batch_data = valid_prefetcher.next()
+            batch_data = data_prefetcher.next()
 
             # After a batch of data is calculated, add 1 to the number of batches
             batch_index += 1

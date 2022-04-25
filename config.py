@@ -1,4 +1,4 @@
-# Copyright 2021 Dakewe Biotech Corporation. All Rights Reserved.
+# Copyright 2022 Dakewe Biotech Corporation. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -55,7 +55,7 @@ if mode == "train_srresnet":
     model_lr = 1e-4
     model_betas = (0.9, 0.999)
 
-    print_frequency = 1000
+    print_frequency = 100
 
 if mode == "train_srgan":
     # Dataset address
@@ -77,9 +77,13 @@ if mode == "train_srgan":
     # Total num epochs
     epochs = 9
 
+    # Feature extraction layer parameter configuration
+    feature_model_extractor_node = "features.35"
+    feature_model_normalize_mean = [0.485, 0.456, 0.406]
+    feature_model_normalize_std = [0.229, 0.224, 0.225]
+
     # Loss function weight
-    pixel_weight = 1.0
-    content_weight = 0.006
+    content_weight = 1
     adversarial_weight = 0.001
 
     # Adam optimizer parameter
@@ -87,8 +91,8 @@ if mode == "train_srgan":
     model_betas = (0.9, 0.999)
 
     # MultiStepLR scheduler parameter
-    optimizer_step_size = epochs // 2
-    optimizer_gamma = 0.1
+    lr_scheduler_step_size = epochs // 2
+    lr_scheduler_gamma = 0.1
 
     print_frequency = 100
 
