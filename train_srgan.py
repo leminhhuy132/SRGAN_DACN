@@ -32,7 +32,7 @@ from dataset import CUDAPrefetcher
 from dataset import TrainValidImageDataset, TestImageDataset
 from model import Discriminator, Generator, ContentLoss
 import matplotlib.pyplot as plt
-from pytorch_ssim import SSIM
+from pytorch_ssim import SSIM, ssim
 
 def main():
     # Initialize training to generate network evaluation indicators
@@ -115,18 +115,8 @@ def main():
     his_psnr = []
     his_ssim = []
     for epoch in range(config.start_epoch, config.epochs):
-        train_psnr, train_ssim = train(discriminator,
-                  generator,
-                  train_prefetcher,
-                  psnr_criterion,
-                  pixel_criterion,
-                  content_criterion,
-                  adversarial_criterion,
-                  d_optimizer,
-                  g_optimizer,
-                  epoch,
-                  scaler,
-                  writer)
+        train_psnr, train_ssim = train(discriminator, generator, train_prefetcher, psnr_criterion, pixel_criterion, content_criterion,
+                                       adversarial_criterion, d_optimizer, g_optimizer, epoch, scaler, writer)
         valid_psnr, valid_ssim = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
         test_psnr, test_ssim = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
         his_psnr.append([train_psnr, valid_psnr, test_psnr])
@@ -143,26 +133,40 @@ def main():
         
         if is_best:
             torch.save({"epoch": epoch + 1,
-                    "best_psnr": best_psnr,
-                    "state_dict": discriminator.state_dict(),
-                    "optimizer": d_optimizer.state_dict(),
-                    "scheduler": d_scheduler.state_dict()
-                    },
-                   os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"))
+                        "best_psnr": best_psnr,
+                        "state_dict": discriminator.state_dict(),
+                        "optimizer": d_optimizer.state_dict(),
+                        "scheduler": d_scheduler.state_dict()
+                        },
+                        os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"))
             torch.save({"epoch": epoch + 1,
-                    "best_psnr": best_psnr,
-                    "state_dict": generator.state_dict(),
-                    "optimizer": g_optimizer.state_dict(),
-                    "scheduler": g_scheduler.state_dict()
-                    },
-                   os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
-            shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_best.pth.tar"))
-            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
+                        "best_psnr": best_psnr,
+                        "state_dict": generator.state_dict(),
+                        "optimizer": g_optimizer.state_dict(),
+                        "scheduler": g_scheduler.state_dict()
+                        },
+                        os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
+            # shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_best.pth.tar"))
+            # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
             # shutil.rmtree(samples_dir)
             # os.makedirs(samples_dir)
         if (epoch + 1) == config.epochs:
-            shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
-            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
+            torch.save({"epoch": epoch + 1,
+                        "best_psnr": best_psnr,
+                        "state_dict": discriminator.state_dict(),
+                        "optimizer": d_optimizer.state_dict(),
+                        "scheduler": d_scheduler.state_dict()
+                        },
+                       os.path.join(samples_dir, f"d_last.pth.tar"))
+            torch.save({"epoch": epoch + 1,
+                        "best_psnr": best_psnr,
+                        "state_dict": generator.state_dict(),
+                        "optimizer": g_optimizer.state_dict(),
+                        "scheduler": g_scheduler.state_dict()
+                        },
+                       os.path.join(samples_dir, f"g_last.pth.tar"))
+            # shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
+            # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
 
     # plot
     plt.figure(1)
@@ -216,10 +220,9 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     return train_prefetcher, valid_prefetcher, test_prefetcher
 
 
-def build_model() -> nn.Module:
+def build_model() -> [nn.Module, nn.Module]:
     discriminator = Discriminator().to(config.device)
     generator = Generator().to(config.device)
-
     return discriminator, generator
 
 
@@ -228,21 +231,18 @@ def define_loss() -> [nn.MSELoss, nn.MSELoss, ContentLoss, nn.BCEWithLogitsLoss]
     pixel_criterion = nn.MSELoss().to(config.device)
     content_criterion = ContentLoss().to(config.device)
     adversarial_criterion = nn.BCEWithLogitsLoss().to(config.device)
-
     return psnr_criterion, pixel_criterion, content_criterion, adversarial_criterion
 
 
 def define_optimizer(discriminator: nn.Module, generator: nn.Module) -> [optim.Adam, optim.Adam]:
     d_optimizer = optim.Adam(discriminator.parameters(), config.model_lr, config.model_betas)
     g_optimizer = optim.Adam(generator.parameters(), config.model_lr, config.model_betas)
-
     return d_optimizer, g_optimizer
 
 
 def define_scheduler(d_optimizer: optim.Adam, g_optimizer: optim.Adam) -> [lr_scheduler.StepLR, lr_scheduler.StepLR]:
     d_scheduler = lr_scheduler.StepLR(d_optimizer, config.optimizer_step_size, config.optimizer_gamma)
     g_scheduler = lr_scheduler.StepLR(g_optimizer, config.optimizer_step_size, config.optimizer_gamma)
-
     return d_scheduler, g_scheduler
 
 
@@ -257,7 +257,7 @@ def train(discriminator,
           g_optimizer,
           epoch,
           scaler,
-          writer) -> float:
+          writer) -> [float, float]:
     # Calculate how many iterations there are under epoch
     batches = len(train_prefetcher)
 
@@ -369,8 +369,8 @@ def train(discriminator,
         d_sr_probabilities.update(d_sr_probability.item(), lr.size(0))
         psnres.update(psnr.item(), lr.size(0))
 
-        ssim = SSIM(sr, hr)
-        ssimes.update(ssim.item(), lr.size(0))
+        ssim_score = ssim(sr.type_as(hr), hr)
+        ssimes.update(ssim_score.item(), lr.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -396,7 +396,7 @@ def train(discriminator,
         batch_index += 1
     return psnres.avg, ssimes.avg
 
-def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> float:
+def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
     batch_time = AverageMeter("Time", ":6.3f")
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.2f")
@@ -438,8 +438,8 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
             psnr = 10. * torch.log10(1. / psnr_criterion(sr_y_tensor, hr_y_tensor))
             psnres.update(psnr.item(), lr.size(0))
 
-            ssim = SSIM(sr_y_tensor, hr_y_tensor)
-            ssimes.update(ssim.item(), lr.size(0))
+            ssim_score = ssim(sr_y_tensor, hr_y_tensor)
+            ssimes.update(ssim_score.item(), lr.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)

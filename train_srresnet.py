@@ -31,7 +31,8 @@ from dataset import CUDAPrefetcher
 from dataset import TrainValidImageDataset, TestImageDataset
 from model import Generator
 import matplotlib.pyplot as plt
-from pytorch_ssim import SSIM
+from pytorch_ssim import ssim
+
 
 def main():
     # Initialize training to generate network evaluation indicators
@@ -97,16 +98,22 @@ def main():
         
         if is_best:
             torch.save({"epoch": epoch + 1,
-                    "best_psnr": best_psnr,
-                    "state_dict": model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "scheduler": None},
-                   os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
-            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
+                        "best_psnr": best_psnr,
+                        "state_dict": model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "scheduler": None},
+                        os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
+            # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
             # shutil.rmtree(samples_dir)
             # os.makedirs(samples_dir)
         if (epoch + 1) == config.epochs:
-            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
+            torch.save({"epoch": epoch + 1,
+                        "best_psnr": best_psnr,
+                        "state_dict": model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "scheduler": None},
+                       os.path.join(samples_dir, f"g_last.pth.tar"))
+            # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
     # plot
     plt.figure(1)
     plt.plot(his_psnr)
@@ -122,6 +129,7 @@ def main():
     plt.ylabel('SSIM score')
     plt.savefig(os.path.join(samples_dir, 'ssim.png'))
 
+
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
     train_datasets = TrainValidImageDataset(config.train_image_dir, config.image_size, config.upscale_factor, "Train")
@@ -132,13 +140,15 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     train_dataloader = DataLoader(train_datasets,
                                   batch_size=config.batch_size,
                                   shuffle=True,
-                                  num_workers=config.num_workers, #so tien trinh chay song song
-                                  pin_memory=True, # If you load your samples in the Dataset on CPU and would like to push it
-                                                    # during training to the GPU, you can speed up the host to device transfer by enabling pin_memory.
-                                  drop_last=True, # parameter ignores the last batch (when the number of examples in
-                                                    # your dataset is not divisible by your batch_size)
-                                  persistent_workers=True) # True will improve performances when you call into the dataloader
-                                                        # multiple times in a row (as creating the workers is expensive).
+                                  num_workers=config.num_workers,  # so tien trinh chay song song
+                                  pin_memory=True,  # If you load your samples in the Dataset on CPU and would like to
+                                                    # push it
+                                                    # during training to the GPU, you can speed up the host to device
+                                                    # transfer by enabling pin_memory.
+                                  drop_last=True,  # parameter ignores the last batch (when the number of examples in
+                                                   # your dataset is not divisible by your batch_size)
+                                  persistent_workers=True)  # True will improve performances when you call into the dataloader
+                                                            # multiple times in a row (as creating the workers is expensive).
     valid_dataloader = DataLoader(valid_datasets,
                                   batch_size=1,
                                   shuffle=False,
@@ -164,7 +174,6 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
 
 def build_model() -> nn.Module:
     model = Generator().to(config.device)
-
     return model
 
 
@@ -186,7 +195,7 @@ def train(model,
           optimizer,
           epoch,
           scaler,
-          writer) -> float:
+          writer) -> [float, float]:
     # Calculate how many iterations there are under epoch
     batches = len(train_prefetcher)
 
@@ -234,8 +243,8 @@ def train(model,
         losses.update(loss.item(), lr.size(0))
         psnres.update(psnr.item(), lr.size(0))
 
-        ssim = SSIM(sr, hr)
-        ssimes.update(ssim.item(), lr.size(0))
+        ssim_score = ssim(sr.type_as(hr), hr)
+        ssimes.update(ssim_score.item(), lr.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -254,7 +263,8 @@ def train(model,
         batch_index += 1
     return psnres.avg, ssimes.avg
 
-def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> float:
+
+def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
     batch_time = AverageMeter("Time", ":6.3f")
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.2f")
@@ -296,8 +306,8 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
             psnr = 10. * torch.log10(1. / psnr_criterion(sr_y_tensor, hr_y_tensor))
             psnres.update(psnr.item(), lr.size(0))
 
-            ssim = SSIM(sr_y_tensor, hr_y_tensor)
-            ssimes.update(ssim.item(), lr.size(0))
+            ssim_score = ssim(sr_y_tensor, hr_y_tensor)
+            ssimes.update(ssim_score.item(), lr.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
