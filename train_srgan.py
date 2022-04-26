@@ -113,22 +113,26 @@ def main():
 
     his_psnr = []
     his_ssim = []
+    his_d_loss = []
     for epoch in range(config.start_epoch, config.epochs):
-        train_psnr, train_ssim = train(discriminator,
-                                       generator,
-                                       train_prefetcher,
-                                       psnr_criterion,
-                                       content_criterion,
-                                       adversarial_criterion,
-                                       d_optimizer,
-                                       g_optimizer,
-                                       epoch,
-                                       scaler,
-                                       writer)
+        train_loss = train(discriminator,
+                                   generator,
+                                   train_prefetcher,
+                                   psnr_criterion,
+                                   content_criterion,
+                                   adversarial_criterion,
+                                   d_optimizer,
+                                   g_optimizer,
+                                   epoch,
+                                   scaler,
+                                   writer)
         valid_psnr, valid_ssim = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
         test_psnr, test_ssim = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
+
+        train_psnr, train_ssim, d_hr_loss, d_sr_loss = train_loss[0], train_loss[1], train_loss[2], train_loss[3]
         his_psnr.append([train_psnr, valid_psnr, test_psnr])
         his_ssim.append([train_ssim, valid_ssim, test_ssim])
+        his_d_loss.append([d_hr_loss, d_sr_loss])
         print("\n")
 
         # Update LR
@@ -190,6 +194,13 @@ def main():
         plt.xlabel('Iter')
         plt.ylabel('SSIM score')
         plt.savefig(os.path.join(samples_dir, 'ssim.png'))
+
+        plt.figure(3)
+        plt.plot(his_d_loss)
+        plt.legend(['train_d_hr_loss', 'train_d_sr_loss'])
+        plt.xlabel('Iter')
+        plt.ylabel('D Loss')
+        plt.savefig(os.path.join(samples_dir, 'd_loss.png'))
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
@@ -396,7 +407,8 @@ def train(discriminator,
 
         # After a batch of data is calculated, add 1 to the number of batches
         batch_index += 1
-    return psnres.avg, ssimes.avg
+    loss_package = [psnres.avg, ssimes.avg, d_loss_hr, d_loss_sr]
+    return loss_package
 
 def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
     batch_time = AverageMeter("Time", ":6.3f")

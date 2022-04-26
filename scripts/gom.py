@@ -4,10 +4,12 @@ import re
 from glob import glob
 
 
-list_folder_input = ['/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/VN/VN_train',
-                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/FR/FR_train',
-                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/EN/EN_train']
-output_dir = '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/SRRAW_text/test'
+list_folder_input = ['/home/minhhuy/Desktop/Python/SRGAN_DACN/data/realsr_textEdit/test',
+                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/EN/EN_test',
+                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/FR/FR_test',
+                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/VN/VN_test',
+                     ]
+output_dir = '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/Textdata/test'
 # list_folder_input = os.listdir('/home/minhhuy/Desktop/Python/SRGAN_DACN/data/SRRAW_text/cropped')
 # list_folder_input = [os.path.join('/home/minhhuy/Desktop/Python/SRGAN_DACN/data/SRRAW_text/cropped', f) for f in list_folder_input]
 # listff = []
