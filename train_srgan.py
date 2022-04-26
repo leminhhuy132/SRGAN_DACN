@@ -49,7 +49,7 @@ def main():
     d_optimizer, g_optimizer = define_optimizer(discriminator, generator)
     print("Define all optimizer functions successfully.")
 
-    d_scheduler, g_scheduler = define_scheduler(discriminator, generator)
+    d_scheduler, g_scheduler = define_scheduler(d_optimizer, g_optimizer)
     print("Define all optimizer scheduler functions successfully.")
 
     if config.resume:
@@ -71,11 +71,11 @@ def main():
         new_state_dict = {k: v for k, v in checkpoint["state_dict"].items() if k in model_state_dict}
         # Overwrite the pretrained model weights to the current model
         model_state_dict.update(new_state_dict)
-        discriminator.load_state_dict(model_state_dict)
-        # Load the optimizer model
-        d_optimizer.load_state_dict(checkpoint["optimizer"])
-        # Load the scheduler model
-        d_scheduler.load_state_dict(checkpoint["scheduler"])
+        # discriminator.load_state_dict(model_state_dict)
+        # # Load the optimizer model
+        # d_optimizer.load_state_dict(checkpoint["optimizer"])
+        # # Load the scheduler model
+        # d_scheduler.load_state_dict(checkpoint["scheduler"])
         print("Loaded pretrained discriminator model weights.")
 
     print("Check whether the pretrained generator model is restored...")
@@ -90,11 +90,11 @@ def main():
         new_state_dict = {k: v for k, v in checkpoint["state_dict"].items() if k in model_state_dict}
         # Overwrite the pretrained model weights to the current model
         model_state_dict.update(new_state_dict)
-        generator.load_state_dict(model_state_dict)
-        # Load the optimizer model
-        g_optimizer.load_state_dict(checkpoint["optimizer"])
-        # Load the scheduler model
-        g_scheduler.load_state_dict(checkpoint["scheduler"])
+        # generator.load_state_dict(model_state_dict)
+        # # Load the optimizer model
+        # g_optimizer.load_state_dict(checkpoint["optimizer"])
+        # # Load the scheduler model
+        # g_scheduler.load_state_dict(checkpoint["scheduler"])
         print("Loaded pretrained generator model weights.")
 
     # Create a folder of super-resolution experiment results
@@ -176,20 +176,20 @@ def main():
             # shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
             # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
 
-    # plot
-    plt.figure(1)
-    plt.plot(his_psnr)
-    plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
-    plt.xlabel('Iter')
-    plt.ylabel('PSNR score')
-    plt.savefig(os.path.join(samples_dir, 'psnr.png'))
+        # plot
+        plt.figure(1)
+        plt.plot(his_psnr)
+        plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
+        plt.xlabel('Iter')
+        plt.ylabel('PSNR score')
+        plt.savefig(os.path.join(samples_dir, 'psnr.png'))
 
-    plt.figure(2)
-    plt.plot(his_ssim)
-    plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
-    plt.xlabel('Iter')
-    plt.ylabel('SSIM score')
-    plt.savefig(os.path.join(samples_dir, 'ssim.png'))
+        plt.figure(2)
+        plt.plot(his_ssim)
+        plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
+        plt.xlabel('Iter')
+        plt.ylabel('SSIM score')
+        plt.savefig(os.path.join(samples_dir, 'ssim.png'))
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets

@@ -147,3 +147,5 @@ samples/
 *.pdf
 *.odt
 *.doc
+
+./scripts/gom2.py

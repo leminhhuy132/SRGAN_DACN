@@ -14,7 +14,9 @@
 import os
 
 # Prepare dataset
-os.system("python ./prepare_dataset.py --images_dir ../data/ImageNet/original --output_dir ../data/ImageNet/SRGAN/train --image_size 96 --step 48 --num_workers 16")
-
+os.system("python ./prepare_dataset.py --images_dir ../data/Textdata/train --output_dir ../data/Textdata/trainSRGAN --image_size 96 --step 48 --num_workers 1")
+#
 # Split train and valid
-os.system("python ./split_train_valid_dataset.py --train_images_dir ../data/ImageNet/SRGAN/train --valid_images_dir ../data/ImageNet/SRGAN/valid --valid_samples_ratio 0.05")
+os.system("python ./split_train_valid_dataset.py --train_images_dir ../data/Textdata/trainSRGAN --valid_images_dir ../data/Textdata/validSRGAN --valid_samples_ratio 0.2")
+
+os.system("python ./create_LRdata.py --images_dir ../data/Textdata/test --output_dir ../data/Textdata/testx4 --num_workers 1 --upscale_factor 4")

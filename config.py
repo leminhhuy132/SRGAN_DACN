@@ -55,12 +55,12 @@ if mode == "train_srresnet":
     model_lr = 1e-4
     model_betas = (0.9, 0.999)
 
-    print_frequency = 100
+    print_frequency = 1000
 
 if mode == "train_srgan":
     # Dataset address
-    train_image_dir = "data/Textdata/train"
-    valid_image_dir = "data/Textdata/valid"
+    train_image_dir = "data/Textdata/trainSRGAN"
+    valid_image_dir = "data/Textdata/validSRGAN"
     test_lr_image_dir = f"data/Textdata/testx4"
     test_hr_image_dir = f"data/Textdata/test"
 
@@ -94,7 +94,7 @@ if mode == "train_srgan":
     lr_scheduler_step_size = epochs // 2
     lr_scheduler_gamma = 0.1
 
-    print_frequency = 100
+    print_frequency = 1000
 
 if mode == "valid":
     # Test data address

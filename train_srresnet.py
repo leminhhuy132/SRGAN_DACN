@@ -113,20 +113,20 @@ def main():
                         "scheduler": None},
                        os.path.join(samples_dir, f"g_last.pth.tar"))
             # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
-    # plot
-    plt.figure(1)
-    plt.plot(his_psnr)
-    plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
-    plt.xlabel('Iter')
-    plt.ylabel('PSNR score')
-    plt.savefig(os.path.join(samples_dir, 'psnr.png'))
+        # plot
+        plt.figure(1)
+        plt.plot(his_psnr)
+        plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
+        plt.xlabel('Iter')
+        plt.ylabel('PSNR score')
+        plt.savefig(os.path.join(samples_dir, 'psnr.png'))
 
-    plt.figure(2)
-    plt.plot(his_ssim)
-    plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
-    plt.xlabel('Iter')
-    plt.ylabel('SSIM score')
-    plt.savefig(os.path.join(samples_dir, 'ssim.png'))
+        plt.figure(2)
+        plt.plot(his_ssim)
+        plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
+        plt.xlabel('Iter')
+        plt.ylabel('SSIM score')
+        plt.savefig(os.path.join(samples_dir, 'ssim.png'))
 
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
@@ -172,7 +172,7 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
 
 
 def build_model() -> nn.Module:
-    model = Generator().to(config.device)
+    model = Generator().to(device=config.device, memory_format=torch.channels_last)
     return model
 
 
@@ -237,7 +237,7 @@ def train(model,
         scaler.update()
 
         # measure accuracy and record loss
-        psnr = 10. * torch.log10(1. / psnr_criterion(sr, hr))
+        psnr = 10. * torch.log10_(1. / psnr_criterion(sr, hr))
         losses.update(loss.item(), lr.size(0))
         psnres.update(psnr.item(), lr.size(0))
 
@@ -310,7 +310,7 @@ def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [fl
             hr_y_tensor = hr_y_tensor.to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
 
             # measure accuracy and record loss
-            psnr = 10. * torch.log10(1. / psnr_criterion(sr_y_tensor, hr_y_tensor))
+            psnr = 10. * torch.log10_(1. / psnr_criterion(sr_y_tensor, hr_y_tensor))
             psnres.update(psnr.item(), lr.size(0))
 
             ssim_score = ssim(sr_y_tensor, hr_y_tensor)
