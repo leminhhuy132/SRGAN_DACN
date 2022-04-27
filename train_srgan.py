@@ -129,7 +129,7 @@ def main():
         valid_psnr, valid_ssim = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
         test_psnr, test_ssim = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
 
-        train_psnr, train_ssim, d_hr_loss, d_sr_loss = train_loss[0], train_loss[1], train_loss[2], train_loss[3]
+        train_psnr, train_ssim, d_hr_loss, d_sr_loss = train_loss
         his_psnr.append([train_psnr, valid_psnr, test_psnr])
         his_ssim.append([train_ssim, valid_ssim, test_ssim])
         his_d_loss.append([d_hr_loss, d_sr_loss])
@@ -158,8 +158,8 @@ def main():
                         "scheduler": g_scheduler.state_dict()
                         },
                         os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
-            # shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_best.pth.tar"))
-            # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
+            shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_best.pth.tar"))
+            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
             # shutil.rmtree(samples_dir)
             # os.makedirs(samples_dir)
         if (epoch + 1) == config.epochs:
@@ -177,30 +177,10 @@ def main():
                         "scheduler": g_scheduler.state_dict()
                         },
                        os.path.join(samples_dir, f"g_last.pth.tar"))
-            # shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
-            # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
-
+            shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
+            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
         # plot
-        plt.figure(1)
-        plt.plot(his_psnr)
-        plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
-        plt.xlabel('Iter')
-        plt.ylabel('PSNR score')
-        plt.savefig(os.path.join(samples_dir, 'psnr.png'))
-
-        plt.figure(2)
-        plt.plot(his_ssim)
-        plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
-        plt.xlabel('Iter')
-        plt.ylabel('SSIM score')
-        plt.savefig(os.path.join(samples_dir, 'ssim.png'))
-
-        plt.figure(3)
-        plt.plot(his_d_loss)
-        plt.legend(['train_d_hr_loss', 'train_d_sr_loss'])
-        plt.xlabel('Iter')
-        plt.ylabel('D Loss')
-        plt.savefig(os.path.join(samples_dir, 'd_loss.png'))
+        plot(his_psnr, his_ssim, his_d_loss, samples_dir)
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
@@ -488,6 +468,27 @@ def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [fl
 
     return psnres.avg, ssimes.avg
 
+def plot(his_psnr, his_ssim, his_d_loss, pathsave):
+    plt.figure(1)
+    plt.plot(his_psnr)
+    plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
+    plt.xlabel('Iter')
+    plt.ylabel('PSNR score')
+    plt.savefig(os.path.join(pathsave, 'psnr.png'))
+
+    plt.figure(2)
+    plt.plot(his_ssim)
+    plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
+    plt.xlabel('Iter')
+    plt.ylabel('SSIM score')
+    plt.savefig(os.path.join(pathsave, 'ssim.png'))
+
+    plt.figure(3)
+    plt.plot(his_d_loss)
+    plt.legend(['train_d_hr_loss', 'train_d_sr_loss'])
+    plt.xlabel('Iter')
+    plt.ylabel('D Loss')
+    plt.savefig(os.path.join(pathsave, 'd_loss.png'))
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
 class Summary(Enum):

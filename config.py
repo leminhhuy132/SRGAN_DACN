@@ -34,8 +34,8 @@ exp_name = "SRResNet_baseline"
 
 if mode == "train_srresnet":
     # Dataset address
-    train_image_dir = "data/Textdata/train"
-    valid_image_dir = "data/Textdata/train"
+    train_image_dir = "data/Textdata/trainSRGAN"
+    valid_image_dir = "data/Textdata/validSRGAN"
     test_lr_image_dir = f"data/Textdata/testx4"
     test_hr_image_dir = f"data/Textdata/test"
 

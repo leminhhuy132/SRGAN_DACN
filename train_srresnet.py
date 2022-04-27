@@ -83,12 +83,15 @@ def main():
     scaler = amp.GradScaler()
     his_psnr = []
     his_ssim = []
+    his_pixel_loss = []
     for epoch in range(config.start_epoch, config.epochs):
-        train_psnr, train_ssim = train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, scaler, writer)
+        train_loss = train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, scaler, writer)
         valid_psnr, valid_ssim = validate(model, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
         test_psnr, test_ssim = validate(model, test_prefetcher, psnr_criterion, epoch, writer, "Test")
+        train_psnr, train_ssim, pixel_loss = train_loss
         his_psnr.append([train_psnr, valid_psnr, test_psnr])
         his_ssim.append([train_ssim, valid_ssim, test_ssim])
+        his_pixel_loss.append(pixel_loss)
         print("\n")
 
         # Automatically save the model with the highest index
@@ -102,7 +105,8 @@ def main():
                         "optimizer": optimizer.state_dict(),
                         "scheduler": None},
                         os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
-            # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
+            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
+                            os.path.join(results_dir, "g_best.pth.tar"))
             # shutil.rmtree(samples_dir)
             # os.makedirs(samples_dir)
         if (epoch + 1) == config.epochs:
@@ -112,21 +116,10 @@ def main():
                         "optimizer": optimizer.state_dict(),
                         "scheduler": None},
                        os.path.join(samples_dir, f"g_last.pth.tar"))
-            # shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
+            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
+                            os.path.join(results_dir, "g_last.pth.tar"))
         # plot
-        plt.figure(1)
-        plt.plot(his_psnr)
-        plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
-        plt.xlabel('Iter')
-        plt.ylabel('PSNR score')
-        plt.savefig(os.path.join(samples_dir, 'psnr.png'))
-
-        plt.figure(2)
-        plt.plot(his_ssim)
-        plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
-        plt.xlabel('Iter')
-        plt.ylabel('SSIM score')
-        plt.savefig(os.path.join(samples_dir, 'ssim.png'))
+        plot(his_psnr, his_ssim, his_pixel_loss, samples_dir)
 
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
@@ -259,7 +252,8 @@ def train(model,
 
         # After a batch of data is calculated, add 1 to the number of batches
         batch_index += 1
-    return psnres.avg, ssimes.avg
+    loss_package = [psnres.avg, ssimes.avg, losses.avg]
+    return loss_package
 
 
 def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
@@ -340,6 +334,34 @@ def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [fl
 
     return psnres.avg, ssimes.avg
 
+
+def plot(his_psnr, his_ssim, his_pixel_loss, pathsave):
+    psnr = np.array(his_psnr)
+    plt.figure(1)
+    plt.plot(psnr[:, 0], 'r')
+    plt.plot(psnr[:, 1], 'y')
+    plt.plot(psnr[:, 2], 'g')
+    plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
+    plt.xlabel('Iter')
+    plt.ylabel('PSNR score')
+    plt.savefig(os.path.join(pathsave, 'psnr.png'))
+
+    ssim = np.array(his_ssim)
+    plt.figure(2)
+    plt.plot(ssim[:, 0], 'r')
+    plt.plot(ssim[:, 1], 'y')
+    plt.plot(ssim[:, 2], 'g')
+    plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
+    plt.xlabel('Iter')
+    plt.ylabel('SSIM score')
+    plt.savefig(os.path.join(pathsave, 'ssim.png'))
+
+    plt.figure(3)
+    plt.plot(his_pixel_loss, 'r')
+    plt.legend(['Pixel Loss'])
+    plt.xlabel('Iter')
+    plt.ylabel('Pixel Loss')
+    plt.savefig(os.path.join(pathsave, 'pixelloss.png'))
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
 class Summary(Enum):
