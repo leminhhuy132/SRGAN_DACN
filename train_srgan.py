@@ -111,28 +111,29 @@ def main():
     # Initialize the gradient scaler.
     scaler = amp.GradScaler()
 
-    his_psnr = []
-    his_ssim = []
-    his_d_loss = []
+    his_psnr, his_ssim, his_d_loss = [], [], []
+    his_content_loss, his_adversarial_loss = [], []
     for epoch in range(config.start_epoch, config.epochs):
         train_loss = train(discriminator,
-                                   generator,
-                                   train_prefetcher,
-                                   psnr_criterion,
-                                   content_criterion,
-                                   adversarial_criterion,
-                                   d_optimizer,
-                                   g_optimizer,
-                                   epoch,
-                                   scaler,
-                                   writer)
+                           generator,
+                           train_prefetcher,
+                           psnr_criterion,
+                           content_criterion,
+                           adversarial_criterion,
+                           d_optimizer,
+                           g_optimizer,
+                           epoch,
+                           scaler,
+                           writer)
         valid_psnr, valid_ssim = validate(generator, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
         test_psnr, test_ssim = validate(generator, test_prefetcher, psnr_criterion, epoch, writer, "Test")  # Automatically save the model with the highest index
 
-        train_psnr, train_ssim, d_hr_loss, d_sr_loss = train_loss
+        train_psnr, train_ssim, d_hr_loss, d_sr_loss, content_loss, adversarial_loss = train_loss
         his_psnr.append([train_psnr, valid_psnr, test_psnr])
         his_ssim.append([train_ssim, valid_ssim, test_ssim])
         his_d_loss.append([d_hr_loss, d_sr_loss])
+        his_content_loss.append(content_loss)
+        his_adversarial_loss.append(adversarial_loss)
         print("\n")
 
         # Update LR
@@ -148,15 +149,13 @@ def main():
                         "best_psnr": best_psnr,
                         "state_dict": discriminator.state_dict(),
                         "optimizer": d_optimizer.state_dict(),
-                        "scheduler": d_scheduler.state_dict()
-                        },
+                        "scheduler": d_scheduler.state_dict()},
                         os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"))
             torch.save({"epoch": epoch + 1,
                         "best_psnr": best_psnr,
                         "state_dict": generator.state_dict(),
                         "optimizer": g_optimizer.state_dict(),
-                        "scheduler": g_scheduler.state_dict()
-                        },
+                        "scheduler": g_scheduler.state_dict()},
                         os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_best.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
@@ -167,20 +166,18 @@ def main():
                         "best_psnr": best_psnr,
                         "state_dict": discriminator.state_dict(),
                         "optimizer": d_optimizer.state_dict(),
-                        "scheduler": d_scheduler.state_dict()
-                        },
+                        "scheduler": d_scheduler.state_dict()},
                        os.path.join(samples_dir, f"d_last.pth.tar"))
             torch.save({"epoch": epoch + 1,
                         "best_psnr": best_psnr,
                         "state_dict": generator.state_dict(),
                         "optimizer": g_optimizer.state_dict(),
-                        "scheduler": g_scheduler.state_dict()
-                        },
+                        "scheduler": g_scheduler.state_dict()},
                        os.path.join(samples_dir, f"g_last.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
         # plot
-        plot(his_psnr, his_ssim, his_d_loss, samples_dir)
+        plot(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, samples_dir)
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
@@ -387,7 +384,8 @@ def train(discriminator,
 
         # After a batch of data is calculated, add 1 to the number of batches
         batch_index += 1
-    loss_package = [psnres.avg, ssimes.avg, d_loss_hr, d_loss_sr]
+    loss_package = [psnres.avg, ssimes.avg, d_hr_probabilities.avg, d_sr_probabilities.avg,
+                    content_losses.avg, adversarial_losses.avg]
     return loss_package
 
 def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [float, float]:
@@ -468,7 +466,8 @@ def validate(model, data_prefetcher, psnr_criterion, epoch, writer, mode) -> [fl
 
     return psnres.avg, ssimes.avg
 
-def plot(his_psnr, his_ssim, his_d_loss, pathsave):
+
+def plot(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, pathsave):
     plt.figure(1)
     plt.plot(his_psnr)
     plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
@@ -489,6 +488,19 @@ def plot(his_psnr, his_ssim, his_d_loss, pathsave):
     plt.xlabel('Iter')
     plt.ylabel('D Loss')
     plt.savefig(os.path.join(pathsave, 'd_loss.png'))
+
+    plt.figure(4)
+    plt.plot(his_content_loss)
+    plt.xlabel('Iters')
+    plt.ylabel('Content Loss')
+    plt.savefig(os.path.join(pathsave, 'content_loss.png'))
+
+    plt.figure(5)
+    plt.plot(his_adversarial_loss)
+    plt.xlabel('Iters')
+    plt.ylabel('Adversarial Loss')
+    plt.savefig(os.path.join(pathsave, 'adversarial_loss.png'))
+
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
 class Summary(Enum):
