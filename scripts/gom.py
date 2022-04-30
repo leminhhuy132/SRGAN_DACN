@@ -10,15 +10,7 @@ list_folder_input = ['/home/minhhuy/Desktop/Python/SRGAN_DACN/data/realsr_textEd
                      '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/VN/VN_test',
                      ]
 output_dir = '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/Textdata/test'
-# list_folder_input = os.listdir('/home/minhhuy/Desktop/Python/SRGAN_DACN/data/SRRAW_text/cropped')
-# list_folder_input = [os.path.join('/home/minhhuy/Desktop/Python/SRGAN_DACN/data/SRRAW_text/cropped', f) for f in list_folder_input]
-# listff = []
-# for i in list_folder_input:
-#     listf = os.listdir(i)
-#     listf = [os.path.join(i, f) for f in listf]
-#     if len(listf) > 0:
-#         listff = listff + listf
-# list_folder_input = listff
+
 def main() -> None:
     # if os.path.exists(output_dir):
     #     shutil.rmtree(output_dir)

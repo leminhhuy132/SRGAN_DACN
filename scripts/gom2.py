@@ -1,50 +1,79 @@
-import shutil
 import os
-import glob
+import shutil
 import re
+from glob import glob
+import argparse
+#python ./scripts/gom2.py --input_dir  --output_dir  --image_file_extension  --delete_specific_file_extension  --delete_file_extension
 
-# mydir = '/media/minhhuy/5E525A46525A22D7/Data/test'
-# f = os.listdir(mydir)
-# for i in f:
-#     filelist = glob.glob(os.path.join(mydir,i,'*ARW'))
-#     for a in filelist:
-#         os.remove(a)
+def main(args) -> None:
+    delete_specific_file_extension = args.delete_specific_file_extension
+    delete_file_extension = args.delete_file_extension
+    input_dir = args.input_dir
+    image_file_extension = args.image_file_extension
+    output_dir = args.output_dir
 
-# mydir = '/media/minhhuy/5E525A46525A22D7/Data/test'
-# filelist = glob.glob(os.path.join(mydir,'*JPG'))
-# print(filelist)
-# for a in filelist:
-#     os.remove(a)
+    list_folder_input = [x[0] for x in os.walk(input_dir)]
+    list_folder_input.sort(key=natural_keys)
+    # print(list_folder_input)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        start = 1
+        print('Start: ', start)
+    else:
+        list_output = os.listdir(output_dir)
+        print('Length Output: ', len(list_output))
+        if len(list_output) > 0:
+            list_output.sort(key=natural_keys)
+            end_output = list_output[-1]
+            end_output = end_output.split('.')[0]
+            start = int(end_output) + 1
+            print('Start: ', start)
+        else:
+            start = 1
+            print('Start: ', start)
 
-
-list_folder_input = os.listdir('/media/minhhuy/5E525A46525A22D7/Data/test/')
-
-output_dir = '/media/minhhuy/5E525A46525A22D7/Data/test/'
-
-
-def main() -> None:
-    index = 1
+    index = start
     for folder_input in list_folder_input:
+        # print('Folder: ', folder_input)
+        # Delete Specific file extention
+        if delete_specific_file_extension:
+            delete_file_names = glob(os.path.join(folder_input, delete_file_extension))
+            for a in delete_file_names:
+                os.remove(a)
         # Get all image paths
-        # image_file_names = glob.glob(os.path.join('/media/minhhuy/5E525A46525A22D7/Data/test/',folder_input,'*JPG'))
-        # print('1 ',image_file_names)
-        # print('Length Input {dir}: '.format(dir=folder_input), len(image_file_names))
-        # for image in image_file_names:
-        #     worker(os.path.join('/media/minhhuy/5E525A46525A22D7/Data/test/',folder_input), image, index)
-        #     index += 1
-
-        # image_file_names = glob.glob(os.path.join('/media/minhhuy/5E525A46525A22D7/Data/test/',folder_input,'aligned','*JPG'))
-        # print('2 ',image_file_names)
-        # print('Length Input {dir}: '.format(dir=folder_input), len(image_file_names))
-        # for image in image_file_names:
-        #     worker(os.path.join('/media/minhhuy/5E525A46525A22D7/Data/test/',folder_input,'aligned'), image, index)
-        #     index += 1
-        shutil.rmtree(os.path.join('/media/minhhuy/5E525A46525A22D7/Data/test/', folder_input))
+        image_file_names = glob(os.path.join(folder_input, image_file_extension))
+        print('List: ', image_file_names)
+        print('Length Input {dir}: '.format(dir=folder_input), len(image_file_names))
+        for image in image_file_names:
+            worker(folder_input, image, index)
+            index += 1
 
 
-def worker(images_dir, image_file_name, index) -> None:
+def worker(images_dir, image_file_name, output_dir, index) -> None:
     new_image_name = f"{index}.{image_file_name.split('.')[-1]}"
     shutil.copyfile(f"{image_file_name}", f"{output_dir}/{new_image_name}")
 
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+    '''
+    return [atoi(c) for c in re.split(r'(\d+)', text)]
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Prepare database scripts.")
+    parser.add_argument("--input_dir", type=str, help="Path to input image directory.")
+    parser.add_argument("--output_dir", type=str, help="Path to generator image directory.")
+    parser.add_argument("--image_file_extension", type=str, help="File extension of input image.")
+    parser.add_argument("--delete_specific_file_extension", type=bool, default=False,
+                        help="If True, all file with folow file extension will be delete.")
+    parser.add_argument("--delete_file_extension", type=str, default=None, help="File extension need to delete.")
+    args = parser.parse_args()
+
+    main(args)
+

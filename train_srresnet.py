@@ -361,7 +361,7 @@ def plot(his_psnr, his_ssim, his_pixel_loss, pathsave):
     plt.legend(['Pixel Loss'])
     plt.xlabel('Iter')
     plt.ylabel('Pixel Loss')
-    plt.savefig(os.path.join(pathsave, 'pixelloss.png'))
+    plt.savefig(os.path.join(pathsave, 'pixel_loss.png'))
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
 class Summary(Enum):
