@@ -3,7 +3,7 @@ import shutil
 import re
 from glob import glob
 import argparse
-#python ./scripts/gom2.py --input_dir  --output_dir  --image_file_extension  --delete_specific_file_extension  --delete_file_extension
+#python ./scripts/gom2.py --input_dir data/SRRAW_text --output_dir data/SRRAW_textEdit --image_file_extension '*jpg' --delete_specific_file_extension TRUE --delete_file_extension '*ARW'
 
 def main(args) -> None:
     delete_specific_file_extension = args.delete_specific_file_extension
@@ -42,10 +42,10 @@ def main(args) -> None:
                 os.remove(a)
         # Get all image paths
         image_file_names = glob(os.path.join(folder_input, image_file_extension))
-        print('List: ', image_file_names)
+        # print('List: ', image_file_names)
         print('Length Input {dir}: '.format(dir=folder_input), len(image_file_names))
         for image in image_file_names:
-            worker(folder_input, image, index)
+            worker(folder_input, image, output_dir, index)
             index += 1
 
 

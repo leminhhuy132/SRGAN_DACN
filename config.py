@@ -41,15 +41,15 @@ if mode == "train_srresnet":
 
 
     image_size = 96
-    batch_size = 16
-    num_workers = 2
+    batch_size = 256
+    num_workers = 4
 
     # Incremental training and migration training
     start_epoch = 0
     resume = "results/SRGAN/srresnet-ImageNet-dbebcec6.pth.tar"
 
     # Total num epochs
-    epochs = 45
+    epochs = 1000000
 
     # Adam optimizer parameter
     model_lr = 1e-4
@@ -65,8 +65,8 @@ if mode == "train_srgan":
     test_hr_image_dir = f"data/Textdata/test"
 
     image_size = 96
-    batch_size = 16
-    num_workers = 2
+    batch_size = 256
+    num_workers = 4
 
     # Incremental training and migration training
     start_epoch = 0
@@ -75,7 +75,7 @@ if mode == "train_srgan":
     resume_g = "results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
 
     # Total num epochs
-    epochs = 9
+    epochs = 200000
 
     # Feature extraction layer parameter configuration
     feature_model_extractor_node = "features.35"

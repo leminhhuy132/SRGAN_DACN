@@ -142,16 +142,16 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
                                   persistent_workers=True)  # True will improve performances when you call into the dataloader
                                                             # multiple times in a row (as creating the workers is expensive).
     valid_dataloader = DataLoader(valid_datasets,
-                                  batch_size=1,
+                                  batch_size=config.batch_size,
                                   shuffle=False,
-                                  num_workers=1,
+                                  num_workers=config.num_workers,
                                   pin_memory=True,
                                   drop_last=False,
                                   persistent_workers=True)
     test_dataloader = DataLoader(test_datasets,
-                                 batch_size=1,
+                                 batch_size=config.batch_size,
                                  shuffle=False,
-                                 num_workers=1,
+                                 num_workers=config.num_workers,
                                  pin_memory=True,
                                  drop_last=False,
                                  persistent_workers=True)

@@ -4,12 +4,13 @@ import re
 from glob import glob
 
 
-list_folder_input = ['/home/minhhuy/Desktop/Python/SRGAN_DACN/data/realsr_textEdit/test',
-                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/EN/EN_test',
-                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/FR/FR_test',
-                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/VN/VN_test',
+list_folder_input = ['/home/minhhuy/Desktop/Python/SRGAN_DACN/data/realsr_textEdit/train',
+                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/SRRAW_textEdit',
+                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/EN/EN_train',
+                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/FR/FR_train',
+                     '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/VN/VN_train',
                      ]
-output_dir = '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/Textdata/test'
+output_dir = '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/Textdata/train'
 
 def main() -> None:
     # if os.path.exists(output_dir):
