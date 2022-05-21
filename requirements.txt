@@ -3,6 +3,5 @@ numpy
 tqdm
 torch
 torchvision
-setuptools
 natsort
 matplotlib

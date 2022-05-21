@@ -2,8 +2,9 @@ import os
 import shutil
 import re
 from glob import glob
+import cv2
 
-
+image_size = 96
 list_folder_input = ['/home/minhhuy/Desktop/Python/SRGAN_DACN/data/realsr_textEdit/train',
                      '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/SRRAW_textEdit',
                      '/home/minhhuy/Desktop/Python/SRGAN_DACN/data/datasets/EN/EN_train',
@@ -38,8 +39,11 @@ def main() -> None:
         image_file_names = os.listdir(folder_input)
         print('Length Input {dir}: '.format(dir=folder_input), len(image_file_names))
         for image in image_file_names:
-            worker(folder_input, image, index)
-            index += 1
+            img = cv2.imread(image)
+            [h, w, _] = img.shape
+            if h >= image_size and w >= image_size:
+                worker(folder_input, image, output_dir, index)
+                index += 1
 
 
 def worker(images_dir, image_file_name, index) -> None:

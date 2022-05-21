@@ -25,6 +25,8 @@ np.random.seed(0)
 device = torch.device("cuda", 0)
 # Turning on when the image size does not change during training can speed up training
 cudnn.benchmark = True
+# When evaluating the performance of the SR model, whether to verify only the Y channel image data
+only_test_y_channel = True
 # Image magnification factor
 upscale_factor = 4
 # Current configuration parameter method

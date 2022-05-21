@@ -3,7 +3,9 @@ import shutil
 import re
 from glob import glob
 import argparse
+import cv2
 #python ./scripts/gom2.py --input_dir data/SRRAW_text --output_dir data/SRRAW_textEdit --image_file_extension '*jpg' --delete_specific_file_extension TRUE --delete_file_extension '*ARW'
+image_size = 96
 
 def main(args) -> None:
     delete_specific_file_extension = args.delete_specific_file_extension
@@ -45,8 +47,11 @@ def main(args) -> None:
         # print('List: ', image_file_names)
         print('Length Input {dir}: '.format(dir=folder_input), len(image_file_names))
         for image in image_file_names:
-            worker(folder_input, image, output_dir, index)
-            index += 1
+            img = cv2.imread(image)
+            [h, w, _] = img.shape
+            if h >= image_size and w >= image_size:
+                worker(folder_input, image, output_dir, index)
+                index += 1
 
 
 def worker(images_dir, image_file_name, output_dir, index) -> None:
