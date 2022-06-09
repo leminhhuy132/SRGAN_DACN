@@ -36,10 +36,10 @@ exp_name = "SRResNet_baseline"
 
 if mode == "train_srresnet":
     # Dataset address
-    train_image_dir = "data/ImageCrop/train"
-    valid_image_dir = "data/ImageCrop/val"
-    test_lr_image_dir = "data/ImageCrop/testx4"
-    test_hr_image_dir = "data/Textdata/test"
+    train_image_dir = "data/ImagenetCrop/train"
+    valid_image_dir = "data/ImagenetCrop/val"
+    test_lr_image_dir = "data/ImagenetCrop/testx4"
+    test_hr_image_dir = "data/ImagenetCrop/test"
 
 
     image_size = 96
@@ -61,10 +61,10 @@ if mode == "train_srresnet":
 
 if mode == "train_srgan":
     # Dataset address
-    train_image_dir = "data/ImageCrop/train"
-    valid_image_dir = "data/ImageCrop/val"
-    test_lr_image_dir = "data/ImageCrop/testx4"
-    test_hr_image_dir = "data/Textdata/test"
+    train_image_dir = "data/ImagenetCrop/train"
+    valid_image_dir = "data/ImagenetCrop/val"
+    test_lr_image_dir = "data/ImagenetCrop/testx4"
+    test_hr_image_dir = "data/ImagenetCrop/test"
 
     image_size = 96
     batch_size = 256
@@ -98,10 +98,10 @@ if mode == "train_srgan":
 
     print_frequency = 1000
 
-if mode == "valid":
+if mode == "test":
     # Test data address
-    lr_dir = f"data/ImageCrop/testx4"
+    lr_dir = f"data/ImagenetCrop/testx4"
     sr_dir = f"results/test/{exp_name}"
-    hr_dir = f"data/ImageCrop/test"
+    hr_dir = f"data/ImagenetCrop/test"
 
     model_path = f"results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
