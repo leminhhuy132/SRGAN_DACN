@@ -1,4 +1,4 @@
-# Copyright 2021 Dakewe Biotech Corporation. All Rights Reserved.
+# Copyright 2022 Dakewe Biotech Corporation. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Realize the function of dataset preparation."""
 import os
 import queue
 import threading
@@ -31,7 +30,6 @@ __all__ = [
 
 class TrainValidImageDataset(Dataset):
     """Define training/valid dataset loading methods.
-
     Args:
         image_dir (str): Train/Valid dataset address.
         image_size (int): High resolution image size.
@@ -81,20 +79,16 @@ class TrainValidImageDataset(Dataset):
 
 class TestImageDataset(Dataset):
     """Define Test dataset loading methods.
-
     Args:
         test_lr_image_dir (str): Test dataset address for low resolution image dir.
         test_hr_image_dir (str): Test dataset address for high resolution image dir.
-        
     """
 
     def __init__(self, test_lr_image_dir: str, test_hr_image_dir: str) -> None:
         super(TestImageDataset, self).__init__()
         # Get all image file names in folder
         self.lr_image_file_names = [os.path.join(test_lr_image_dir, x) for x in os.listdir(test_lr_image_dir)]
-        # Edited by huy/ Original: self.hr_image_file_names = [os.path.join(test_hr_image_dir, x) for x in os.listdir(test_lr_image_dir)]
-        self.hr_image_file_names = [os.path.join(test_hr_image_dir, x) for x in os.listdir(test_hr_image_dir)]
-        
+        self.hr_image_file_names = [os.path.join(test_hr_image_dir, x) for x in os.listdir(test_lr_image_dir)]
 
     def __getitem__(self, batch_index: int) -> [torch.Tensor, torch.Tensor]:
         # Read a batch of image data
@@ -118,7 +112,6 @@ class TestImageDataset(Dataset):
 
 class PrefetchGenerator(threading.Thread):
     """A fast data prefetch generator.
-
     Args:
         generator: Data generator.
         num_data_prefetch_queue (int): How many early data load queues.
@@ -148,7 +141,6 @@ class PrefetchGenerator(threading.Thread):
 
 class PrefetchDataLoader(DataLoader):
     """A fast data prefetch dataloader.
-
     Args:
         num_data_prefetch_queue (int): How many early data load queues.
         kwargs (dict): Other extended parameters.
@@ -164,7 +156,6 @@ class PrefetchDataLoader(DataLoader):
 
 class CPUPrefetcher:
     """Use the CPU side to accelerate data reading.
-
     Args:
         dataloader (DataLoader): Data loader. Combines a dataset and a sampler, and provides an iterable over the given dataset.
     """
@@ -188,7 +179,6 @@ class CPUPrefetcher:
 
 class CUDAPrefetcher:
     """Use the CUDA side to accelerate data reading.
-
     Args:
         dataloader (DataLoader): Data loader. Combines a dataset and a sampler, and provides an iterable over the given dataset.
         device (torch.device): Specify running device.

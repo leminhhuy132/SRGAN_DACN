@@ -32,6 +32,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def main():
+    # Initialize the number of training epochs
+    start_epoch = 0
+
     # Initialize training to generate network evaluation indicators
     best_psnr = 0.0
     best_ssim = 0.0
@@ -53,7 +56,7 @@ def main():
         # Load checkpoint model
         checkpoint = torch.load(config.resume, map_location=lambda storage, loc: storage)
         # Restore the parameters in the training node to this point
-        config.start_epoch = checkpoint["epoch"]
+        start_epoch = checkpoint["epoch"]
         best_psnr = checkpoint["best_psnr"]
         best_ssim = checkpoint["best_ssim"]
         # Load checkpoint state dict. Extract the fitted model weights
@@ -105,27 +108,18 @@ def main():
         is_best = test_psnr > best_psnr and test_ssim > best_ssim
         best_psnr = max(test_psnr, best_psnr)
         best_ssim = max(test_ssim, best_ssim)
-        
+
+        torch.save({"epoch": epoch + 1,
+                    "best_psnr": best_psnr,
+                    "best_ssim": best_ssim,
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "scheduler": None},
+                   os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
         if is_best:
-            torch.save({"epoch": epoch + 1,
-                        "best_psnr": best_psnr,
-                        "best_ssim": best_ssim,
-                        "state_dict": model.state_dict(),
-                        "optimizer": optimizer.state_dict(),
-                        "scheduler": None},
-                       os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
                             os.path.join(results_dir, "g_best.pth.tar"))
-            # shutil.rmtree(samples_dir)
-            # os.makedirs(samples_dir)
         if (epoch + 1) == config.epochs:
-            torch.save({"epoch": epoch + 1,
-                        "best_psnr": best_psnr,
-                        "best_ssim": best_ssim,
-                        "state_dict": model.state_dict(),
-                        "optimizer": optimizer.state_dict(),
-                        "scheduler": None},
-                       os.path.join(samples_dir, f"g_last.pth.tar"))
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
                             os.path.join(results_dir, "g_last.pth.tar"))
         # plot
