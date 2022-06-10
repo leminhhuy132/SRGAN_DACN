@@ -127,7 +127,7 @@ def main():
 
     his_psnr, his_ssim, his_d_loss = [], [], []
     his_content_loss, his_adversarial_loss = [], []
-    for epoch in range(start_epoch, config.epochs):
+    for epoch in range(start_epoch, start_epoch+config.epochs):
         train_loss = train(discriminator,
                            generator,
                            train_prefetcher,
