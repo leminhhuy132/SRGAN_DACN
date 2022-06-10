@@ -35,6 +35,9 @@ import numpy as np
 
 
 def main():
+    # Initialize the number of training epochs
+    start_epoch = 0
+
     # Initialize training to generate network evaluation indicators
     best_psnr = 0.0
     best_ssim = 0.0
@@ -157,45 +160,34 @@ def main():
         is_best = test_psnr > best_psnr and test_ssim > best_ssim
         best_psnr = max(test_psnr, best_psnr)
         best_ssim = max(test_ssim, best_ssim)
-        
+
+        torch.save({"epoch": epoch + 1,
+                    "best_psnr": best_psnr,
+                    "best_ssim": best_ssim,
+                    "state_dict": discriminator.state_dict(),
+                    "optimizer": d_optimizer.state_dict(),
+                    "scheduler": d_scheduler.state_dict()},
+                   os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"))
+        torch.save({"epoch": epoch + 1,
+                    "best_psnr": best_psnr,
+                    "best_ssim": best_ssim,
+                    "state_dict": generator.state_dict(),
+                    "optimizer": g_optimizer.state_dict(),
+                    "scheduler": g_scheduler.state_dict()},
+                   os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
         if is_best:
-            torch.save({"epoch": epoch + 1,
-                        "best_psnr": best_psnr,
-                        "best_ssim": best_ssim,
-                        "state_dict": discriminator.state_dict(),
-                        "optimizer": d_optimizer.state_dict(),
-                        "scheduler": d_scheduler.state_dict()},
-                       os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"))
-            torch.save({"epoch": epoch + 1,
-                        "best_psnr": best_psnr,
-                        "best_ssim": best_ssim,
-                        "state_dict": generator.state_dict(),
-                        "optimizer": g_optimizer.state_dict(),
-                        "scheduler": g_scheduler.state_dict()},
-                       os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
-            shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_best.pth.tar"))
-            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_best.pth.tar"))
-            # shutil.rmtree(samples_dir)
-            # os.makedirs(samples_dir)
+            shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"),
+                            os.path.join(results_dir, "d_best.pth.tar"))
+            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
+                            os.path.join(results_dir, "g_best.pth.tar"))
         if (epoch + 1) == config.epochs:
-            torch.save({"epoch": epoch + 1,
-                        "best_psnr": best_psnr,
-                        "best_ssim": best_ssim,
-                        "state_dict": discriminator.state_dict(),
-                        "optimizer": d_optimizer.state_dict(),
-                        "scheduler": d_scheduler.state_dict()},
-                       os.path.join(samples_dir, f"d_last.pth.tar"))
-            torch.save({"epoch": epoch + 1,
-                        "best_psnr": best_psnr,
-                        "best_ssim": best_ssim,
-                        "state_dict": generator.state_dict(),
-                        "optimizer": g_optimizer.state_dict(),
-                        "scheduler": g_scheduler.state_dict()},
-                       os.path.join(samples_dir, f"g_last.pth.tar"))
-            shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "d_last.pth.tar"))
-            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "g_last.pth.tar"))
+            shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"),
+                            os.path.join(results_dir, "d_last.pth.tar"))
+            shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
+                            os.path.join(results_dir, "g_last.pth.tar"))
         # plot
         plot(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, samples_dir)
+
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
@@ -426,6 +418,7 @@ def train(discriminator: nn.Module,
         batch_index += 1
         train_package = [psnres.avg, ssimes.avg, d_hr_probabilities.avg, d_sr_probabilities.avg, content_losses.avg, adversarial_losses.avg]
         return train_package
+
 
 def validate(model: nn.Module,
              data_prefetcher: CUDAPrefetcher,

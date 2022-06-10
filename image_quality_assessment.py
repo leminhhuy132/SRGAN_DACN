@@ -30,11 +30,9 @@ __all__ = [
 # The following is the implementation of IQA method in Python, using CPU as processing device
 def _check_image(raw_image: np.ndarray, dst_image: np.ndarray):
     """Check whether the size and type of the two images are the same
-
     Args:
         raw_image (np.ndarray): image data to be compared, BGR format, data range [0, 255]
         dst_image (np.ndarray): reference image data, BGR format, data range [0, 255]
-
     """
     # check image scale
     assert raw_image.shape == dst_image.shape, \
@@ -47,16 +45,13 @@ def _check_image(raw_image: np.ndarray, dst_image: np.ndarray):
 
 def psnr(raw_image: np.ndarray, dst_image: np.ndarray, crop_border: int, only_test_y_channel: bool) -> float:
     """Python implements PSNR (Peak Signal-to-Noise Ratio, peak signal-to-noise ratio) function
-
     Args:
         raw_image (np.ndarray): image data to be compared, BGR format, data range [0, 255]
         dst_image (np.ndarray): reference image data, BGR format, data range [0, 255]
         crop_border (int): crop border a few pixels
         only_test_y_channel (bool): Whether to test only the Y channel of the image.
-
     Returns:
         psnr_metrics (np.float64): PSNR metrics
-
     """
     # Check if two images are similar in scale and type
     _check_image(raw_image, dst_image)
@@ -82,14 +77,11 @@ def psnr(raw_image: np.ndarray, dst_image: np.ndarray, crop_border: int, only_te
 
 def _ssim(raw_image: np.ndarray, dst_image: np.ndarray) -> float:
     """Python implements the SSIM (Structural Similarity) function, which only calculates single-channel data
-
     Args:
         raw_image (np.ndarray): The image data to be compared, in BGR format, the data range is [0, 255]
         dst_image (np.ndarray): reference image data, BGR format, data range is [0, 255]
-
     Returns:
         ssim_metrics (float): SSIM metrics for single channel
-
     """
     c1 = (0.01 * 255.0) ** 2
     c2 = (0.03 * 255.0) ** 2
@@ -117,16 +109,13 @@ def _ssim(raw_image: np.ndarray, dst_image: np.ndarray) -> float:
 
 def ssim(raw_image: np.ndarray, dst_image: np.ndarray, crop_border: int, only_test_y_channel: bool) -> float:
     """Python implements the SSIM (Structural Similarity) function, which calculates single/multi-channel data
-
     Args:
         raw_image (np.ndarray): The image data to be compared, in BGR format, the data range is [0, 255]
         dst_image (np.ndarray): reference image data, BGR format, data range is [0, 255]
         crop_border (int): crop border a few pixels
         only_test_y_channel (bool): Whether to test only the Y channel of the image
-
     Returns:
         ssim_metrics (float): SSIM metrics for single channel
-
     """
     # Check if two images are similar in scale and type
     _check_image(raw_image, dst_image)
@@ -157,11 +146,9 @@ def ssim(raw_image: np.ndarray, dst_image: np.ndarray, crop_border: int, only_te
 # The following is the IQA method implemented by PyTorch, using CUDA as the processing device
 def _check_tensor_shape(raw_tensor: torch.Tensor, dst_tensor: torch.Tensor):
     """Check if the dimensions of the two tensors are the same
-
     Args:
         raw_tensor (np.ndarray or torch.Tensor): image tensor flow to be compared, RGB format, data range [0, 1]
         dst_tensor (np.ndarray or torch.Tensor): reference image tensorflow, RGB format, data range [0, 1]
-
     """
     # Check if tensor scales are consistent
     assert raw_tensor.shape == dst_tensor.shape, \
@@ -171,16 +158,13 @@ def _check_tensor_shape(raw_tensor: torch.Tensor, dst_tensor: torch.Tensor):
 def _psnr_torch(raw_tensor: torch.Tensor, dst_tensor: torch.Tensor, crop_border: int,
                 only_test_y_channel: bool) -> float:
     """PyTorch implements PSNR (Peak Signal-to-Noise Ratio, peak signal-to-noise ratio) function
-
     Args:
         raw_tensor (torch.Tensor): image tensor flow to be compared, RGB format, data range [0, 1]
         dst_tensor (torch.Tensor): reference image tensorflow, RGB format, data range [0, 1]
         crop_border (int): crop border a few pixels
         only_test_y_channel (bool): Whether to test only the Y channel of the image
-
     Returns:
         psnr_metrics (torch.Tensor): PSNR metrics
-
     """
     # Check if two tensor scales are similar
     _check_tensor_shape(raw_tensor, dst_tensor)
@@ -207,14 +191,11 @@ def _psnr_torch(raw_tensor: torch.Tensor, dst_tensor: torch.Tensor, crop_border:
 
 class PSNR(nn.Module):
     """PyTorch implements PSNR (Peak Signal-to-Noise Ratio, peak signal-to-noise ratio) function
-
     Attributes:
         crop_border (int): crop border a few pixels
         only_test_y_channel (bool): Whether to test only the Y channel of the image
-
     Returns:
         psnr_metrics (torch.Tensor): PSNR metrics
-
     """
 
     def __init__(self, crop_border: int, only_test_y_channel: bool) -> None:
@@ -233,16 +214,13 @@ def _ssim_torch(raw_tensor: torch.Tensor,
                 window_size: int,
                 gaussian_kernel_window: np.ndarray) -> float:
     """PyTorch implements the SSIM (Structural Similarity) function, which only calculates single-channel data
-
     Args:
         raw_tensor (torch.Tensor): image tensor flow to be compared, RGB format, data range [0, 255]
         dst_tensor (torch.Tensor): reference image tensorflow, RGB format, data range [0, 255]
         window_size (int): Gaussian filter size
         gaussian_kernel_window (np.ndarray): Gaussian filter
-
     Returns:
         ssim_metrics (torch.Tensor): SSIM metrics
-
     """
     c1 = (0.01 * 255.0) ** 2
     c2 = (0.03 * 255.0) ** 2
@@ -279,7 +257,6 @@ def _ssim_single_torch(raw_tensor: torch.Tensor,
                        window_size: int,
                        gaussian_kernel_window: torch.Tensor) -> torch.Tensor:
     """PyTorch implements the SSIM (Structural Similarity) function, which only calculates single-channel data
-
     Args:
         raw_tensor (torch.Tensor): image tensor flow to be compared, RGB format, data range [0, 1]
         dst_tensor (torch.Tensor): reference image tensorflow, RGB format, data range [0, 1]
@@ -287,10 +264,8 @@ def _ssim_single_torch(raw_tensor: torch.Tensor,
         only_test_y_channel (bool): Whether to test only the Y channel of the image
         window_size (int): Gaussian filter size
         gaussian_kernel_window (torch.Tensor): Gaussian filter
-
     Returns:
         ssim_metrics (torch.Tensor): SSIM metrics
-
     """
     # Check if two tensor scales are similar
     _check_tensor_shape(raw_tensor, dst_tensor)
@@ -316,16 +291,13 @@ def _ssim_single_torch(raw_tensor: torch.Tensor,
 
 class SSIM(nn.Module):
     """PyTorch implements the SSIM (Structural Similarity) function, which only calculates single-channel data
-
     Args:
         crop_border (int): crop border a few pixels
         only_only_test_y_channel (bool): Whether to test only the Y channel of the image
         window_size (int): Gaussian filter size
         gaussian_sigma (float): sigma parameter in Gaussian filter
-
     Returns:
         ssim_metrics (torch.Tensor): SSIM metrics
-
     """
 
     def __init__(self, crop_border: int,
@@ -349,4 +321,3 @@ class SSIM(nn.Module):
                                           self.gaussian_kernel_window)
 
         return ssim_metrics
-

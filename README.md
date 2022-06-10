@@ -2,8 +2,7 @@
 
 ## Overview
 
-This repository contains an op-for-op PyTorch reimplementation
-of [Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network](https://arxiv.org/abs/1609.04802v5).
+This repository contains an op-for-op PyTorch reimplementation of [Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network](https://arxiv.org/abs/1609.04802v5).
 
 ## Table of contents
 
@@ -12,10 +11,12 @@ of [Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial
     - [Table of contents](#table-of-contents)
     - [Download weights](#download-weights)
     - [Download datasets](#download-datasets)
-    - [Test](#test)
-    - [Train](#train)
+    - [How Test and Train](#how-test-and-train)
+        - [Test](#test)
         - [Train SRResNet model](#train-srresnet-model)
+        - [Resume train SRResNet model](#resume-train-srresnet-model)
         - [Train SRGAN model](#train-srgan-model)
+        - [Resume train SRGAN model](#resume-train-srgan-model)
     - [Result](#result)
     - [Contributing](#contributing)
     - [Credit](#credit)
@@ -33,34 +34,46 @@ Contains DIV2K, DIV8K, Flickr2K, OST, T91, Set5, Set14, BSDS100 and BSDS200, etc
 - [Google Driver](https://drive.google.com/drive/folders/1A6lzGeQrFMxPqJehK9s37ce-tPDj20mD?usp=sharing)
 - [Baidu Driver](https://pan.baidu.com/s/1o-8Ty_7q6DiS3ykLU09IVg?pwd=llot)
 
-## Test
+Please refer to `README.md` in the `data` directory for the method of making a dataset.
 
-Modify the contents of the file as follows.
+## How Test and Train
 
-- line 29: `upscale_factor` change to the magnification you need to enlarge.
-- line 31: `mode` change Set to valid mode.
-- line 100: `model_path` change weight address after training.
+Both training and testing only need to modify the `config.py` file. 
 
-## Train
+### Test
 
-Modify the contents of the file as follows.
-
-- line 29: `upscale_factor` change to the magnification you need to enlarge.
-- line 31: `mode` change Set to train mode.
-
-If you want to load weights that you've trained before, modify the contents of the file as follows.
+- line 31: `upscale_factor` change to `4`.
+- line 33: `mode` change to `test`.
+- line 106: `model_path` change to `results/pretrained_models/SRResNet_x4-ImageNet-2096ee7f.pth.tar`.
 
 ### Train SRResNet model
 
-- line 47: `start_epoch` change number of SRResNet training iterations in the previous round.
-- line 48: `resume` change to SRResNet weight address that needs to be loaded.
+- line 31: `upscale_factor` change to `4`.
+- line 33: `mode` change to `train_srresnet`.
+- line 35: `exp_name` change to `SRResNet_baseline`.
+
+### Resume train SRResNet model
+
+- line 31: `upscale_factor` change to `4`.
+- line 33: `mode` change to `train_srresnet`.
+- line 35: `exp_name` change to `SRResNet_baseline`.
+- line 49: `resume` change to `samples/SRResNet_baseline/g_epoch_xxx.pth.tar`.
 
 ### Train SRGAN model
 
-- line 71: `start_epoch` change number of SRGAN training iterations in the previous round.
-- line 72: `resume` change to RRDBNet weight address that needs to be loaded.
-- line 73: `resume_d` change to Discriminator weight address that needs to be loaded.
-- line 74: `resume_g` change to Generator weight address that needs to be loaded.
+- line 31: `upscale_factor` change to `4`.
+- line 33: `mode` change to `train_srgan`.
+- line 35: `exp_name` change to `SRGAN_baseline`.
+- line 73: `resume` change to `results/SRResNet_baseline/g_last.pth.tar`.
+
+### Resume train SRGAN model
+
+- line 31: `upscale_factor` change to `4`.
+- line 33: `mode` change to `train_srgan`.
+- line 35: `exp_name` change to `SRGAN_baseline`.
+- line 73: `resume` change to `results/SRResNet_baseline/g_last.pth.tar`.
+- line 74: `resume_d` change to `samples/SRGAN_baseline/g_epoch_xxx.pth.tar`.
+- line 75: `resume_g` change to `samples/SRGAN_baseline/g_epoch_xxx.pth.tar`.
 
 ## Result
 
@@ -68,13 +81,40 @@ Source of original paper results: [https://arxiv.org/pdf/1609.04802v5.pdf](https
 
 In the following table, the psnr value in `()` indicates the result of the project, and `-` indicates no test.
 
-| Dataset | Scale | SRResNet (PSNR)  |   SRGAN (PSNR)   |
-|:-------:|:-----:|:----------------:|:----------------:|
-|  Set5   |   4   | 32.05(**32.00**) | 29.40(**28.91**) |
-|  Set14  |   4   | 28.49(**28.28**) | 26.02(**25.70**) |
+| Set5 | Scale |      SRResNet      |       SRGAN        |
+|:----:|:-----:|:------------------:|:------------------:|
+| PSNR |   4   |  32.05(**32.16**)  |  29.40(**29.08**)  |
+| SSIM |   4   | 0.9019(**0.8961**) | 0.8472(**0.8305**) |
 
-Low resolution / Recovered High Resolution / Ground Truth
-<span align="center"><img src="assets/result.png"/></span>
+| Set14 | Scale |      SRResNet      |       SRGAN        |
+|:-----:|:-----:|:------------------:|:------------------:|
+| PSNR  |   4   |  28.49(**28.62**)  |  26.02(**25.89**)  |
+| SSIM  |   4   | 0.8184(**0.7831**) | 0.7397(**0.6932**) |
+
+| BSD100 | Scale |      SRResNet      |       SRGAN        |
+|:------:|:-----:|:------------------:|:------------------:|
+|  PSNR  |   4   |  27.58(**27.59**)  |  25.16(**24.91**)  |
+|  SSIM  |   4   | 0.7620(**0.7379**) | 0.6688(**0.6354**) |
+
+```bash
+# Download `SRGAN_x4-ImageNet-c71a4860.pth.tar` weights to `./results/pretrained_models`
+# More detail see `README.md<Download weights>`
+python ./inference.py --inputs_path ./figure/comic_lr.png --output_path ./figure/comic_sr.png --weights_path ./results/pretrained_models/SRGAN_x4-ImageNet-c71a4860.pth.tar
+```
+
+Input: 
+
+<span align="center"><img width="240" height="360" src="figure/comic_lr.png"/></span>
+
+Output: 
+
+<span align="center"><img width="240" height="360" src="figure/comic_sr.png"/></span>
+
+```text
+Build SRGAN model successfully.
+Load SRGAN model weights `./results/pretrained_models/SRGAN_x4-ImageNet-c71a4860.pth.tar` successfully.
+SR image save to `./figure/comic_sr.png`
+```
 
 ## Contributing
 
@@ -103,7 +143,7 @@ perceptual similarity instead of similarity in pixel space. Our deep residual ne
 downsampled images on public benchmarks. An extensive mean-opinion-score (MOS) test shows hugely significant gains in perceptual quality using SRGAN.
 The MOS scores obtained with SRGAN are closer to those of the original high-resolution images than to those obtained with any state-of-the-art method.
 
-[[Paper]](https://arxiv.org/pdf/1609.04802)
+[[Paper]](https://arxiv.org/pdf/1609.04802v5.pdf)
 
 ```bibtex
 @InProceedings{srgan,
