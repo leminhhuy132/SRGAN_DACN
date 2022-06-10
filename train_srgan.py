@@ -68,7 +68,7 @@ def main():
         # Load checkpoint model
         checkpoint = torch.load(config.resume_d, map_location=lambda storage, loc: storage)
         # Restore the parameters in the training node to this point
-        config.start_epoch = checkpoint["epoch"]
+        start_epoch = checkpoint["epoch"]
         best_psnr = checkpoint["best_psnr"]
         best_ssim = checkpoint["best_ssim"]
         # Load checkpoint state dict. Extract the fitted model weights
@@ -88,7 +88,7 @@ def main():
         # Load checkpoint model
         checkpoint = torch.load(config.resume_g, map_location=lambda storage, loc: storage)
         # Restore the parameters in the training node to this point
-        config.start_epoch = checkpoint["epoch"]
+        start_epoch = checkpoint["epoch"]
         best_psnr = checkpoint["best_psnr"]
         best_ssim = checkpoint["best_ssim"]
         # Load checkpoint state dict. Extract the fitted model weights
@@ -127,7 +127,7 @@ def main():
 
     his_psnr, his_ssim, his_d_loss = [], [], []
     his_content_loss, his_adversarial_loss = [], []
-    for epoch in range(config.start_epoch, config.epochs):
+    for epoch in range(start_epoch, config.epochs):
         train_loss = train(discriminator,
                            generator,
                            train_prefetcher,

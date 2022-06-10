@@ -93,7 +93,7 @@ def main():
     his_psnr = []
     his_ssim = []
     his_pixel_loss = []
-    for epoch in range(config.start_epoch, config.epochs):
+    for epoch in range(start_epoch, config.epochs):
         train_loss = train(model, train_prefetcher, pixel_criterion, optimizer, epoch, scaler, writer, psnr_model, ssim_model)
         valid_psnr, valid_ssim = validate(model, valid_prefetcher, epoch, writer, psnr_model, ssim_model, "Valid")
         test_psnr, test_ssim = validate(model, test_prefetcher, epoch, writer, psnr_model, ssim_model, "Test")
