@@ -48,10 +48,10 @@ if mode == "train_srresnet":
 
     # Incremental training and migration training
     start_epoch = 0
-    resume = "results/SRGAN/srresnet-ImageNet-dbebcec6.pth.tar"
+    resume = "samples/SRResNet_baseline/g_epoch_x.pth.tar"
 
     # Total num epochs
-    epochs = 1000000
+    epochs = 10
 
     # Adam optimizer parameter
     model_lr = 1e-4

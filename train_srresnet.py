@@ -28,8 +28,7 @@ import config
 from dataset import CUDAPrefetcher, TrainValidImageDataset, TestImageDataset
 from image_quality_assessment import PSNR, SSIM
 from model import Generator
-import matplotlib.pyplot as plt
-import numpy as np
+from visualize import *
 
 def main():
     # Initialize the number of training epochs
@@ -123,8 +122,8 @@ def main():
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
                             os.path.join(results_dir, "g_last.pth.tar"))
         # plot
-        plot(his_psnr, his_ssim, his_pixel_loss, samples_dir)
-
+        plot3Resnet(his_psnr, his_ssim, his_pixel_loss, samples_dir)
+        saveHisResnet(his_psnr[-1], his_ssim[-1], his_pixel_loss[-1], samples_dir)
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
@@ -254,10 +253,10 @@ def train(model: nn.Module,
         # Statistical loss value for terminal data output
         losses.update(loss.item(), lr.size(0))
 
-        psnr = psnr_model(sr, hr)
-        ssim = ssim_model(sr, hr)
-        psnres.update(psnr.item(), lr.size(0))
-        ssimes.update(ssim.item(), lr.size(0))
+        # psnr = psnr_model(sr, hr)
+        # ssim = ssim_model(sr, hr)
+        # psnres.update(psnr.item(), lr.size(0))
+        # ssimes.update(ssim.item(), lr.size(0))
 
         # Calculate the time it takes to fully train a batch of data
         batch_time.update(time.time() - end)
@@ -274,6 +273,9 @@ def train(model: nn.Module,
 
         # After training a batch of data, add 1 to the number of data batches to ensure that the terminal prints data normally
         batch_index += 1
+
+    # print metrics
+    progress.display_summary()
 
     train_package = [psnres.avg, ssimes.avg, losses.avg]
     return train_package
@@ -360,34 +362,6 @@ def validate(model: nn.Module,
 
     return psnres.avg, ssimes.avg
 
-
-def plot(his_psnr, his_ssim, his_pixel_loss, pathsave):
-    psnr = np.array(his_psnr)
-    plt.figure(1)
-    plt.plot(psnr[:, 0], 'r')
-    plt.plot(psnr[:, 1], 'y')
-    plt.plot(psnr[:, 2], 'g')
-    plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
-    plt.xlabel('Iter')
-    plt.ylabel('PSNR score')
-    plt.savefig(os.path.join(pathsave, 'psnr.png'))
-
-    ssim = np.array(his_ssim)
-    plt.figure(2)
-    plt.plot(ssim[:, 0], 'r')
-    plt.plot(ssim[:, 1], 'y')
-    plt.plot(ssim[:, 2], 'g')
-    plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
-    plt.xlabel('Iter')
-    plt.ylabel('SSIM score')
-    plt.savefig(os.path.join(pathsave, 'ssim.png'))
-
-    plt.figure(3)
-    plt.plot(his_pixel_loss, 'r')
-    plt.legend(['Pixel Loss'])
-    plt.xlabel('Iter')
-    plt.ylabel('Pixel Loss')
-    plt.savefig(os.path.join(pathsave, 'pixel_loss.png'))
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
 class Summary(Enum):
