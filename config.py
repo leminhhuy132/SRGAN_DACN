@@ -48,7 +48,7 @@ if mode == "train_srresnet":
 
     # Incremental training and migration training
     start_epoch = 0
-    resume = "samples/SRResNet_baseline/g_epoch_x.pth.tar"
+    resume = "results/SRResNet_baseline/g_epoch_x.pth.tar"
 
     # Total num epochs
     epochs = 10

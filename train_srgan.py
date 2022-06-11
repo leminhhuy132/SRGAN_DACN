@@ -186,7 +186,7 @@ def main():
                             os.path.join(results_dir, "g_last.pth.tar"))
         # plot
         plot3SRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, samples_dir)
-        saveHisSRGAN(his_psnr[-1], his_ssim[-1], his_d_loss[-1], his_content_loss[-1], his_adversarial_loss[-1], samples_dir)
+        saveHisSRGAN(his_psnr[-1], his_ssim[-1], his_d_loss[-1], his_content_loss[-1], his_adversarial_loss[-1], results_dir)
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
