@@ -18,6 +18,7 @@ import shutil
 import time
 from enum import Enum
 
+import numpy as np
 import torch
 from torch import nn
 from torch import optim
@@ -30,9 +31,8 @@ import config
 from dataset import CUDAPrefetcher, TrainValidImageDataset, TestImageDataset
 from image_quality_assessment import PSNR, SSIM
 from model import Discriminator, Generator, ContentLoss
-import matplotlib.pyplot as plt
-import numpy as np
-
+from visualize import *
+import datetime
 
 def main():
     # Initialize the number of training epochs
@@ -69,7 +69,7 @@ def main():
         # Load checkpoint model
         checkpoint = torch.load(config.resume_d, map_location=lambda storage, loc: storage)
         # Restore the parameters in the training node to this point
-        config.start_epoch = checkpoint["epoch"]
+        start_epoch = checkpoint["epoch"]
         best_psnr = checkpoint["best_psnr"]
         best_ssim = checkpoint["best_ssim"]
         # Load checkpoint state dict. Extract the fitted model weights
@@ -89,7 +89,7 @@ def main():
         # Load checkpoint model
         checkpoint = torch.load(config.resume_g, map_location=lambda storage, loc: storage)
         # Restore the parameters in the training node to this point
-        config.start_epoch = checkpoint["epoch"]
+        start_epoch = checkpoint["epoch"]
         best_psnr = checkpoint["best_psnr"]
         best_ssim = checkpoint["best_ssim"]
         # Load checkpoint state dict. Extract the fitted model weights
@@ -128,7 +128,7 @@ def main():
 
     his_psnr, his_ssim, his_d_loss = [], [], []
     his_content_loss, his_adversarial_loss = [], []
-    for epoch in range(config.start_epoch, config.epochs):
+    for epoch in range(start_epoch, start_epoch+config.epochs):
         train_loss = train(discriminator,
                            generator,
                            train_prefetcher,
@@ -186,8 +186,8 @@ def main():
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
                             os.path.join(results_dir, "g_last.pth.tar"))
         # plot
-        plot(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, samples_dir)
-
+        plot3SRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, samples_dir)
+        saveHisSRGAN(his_psnr[-1], his_ssim[-1], his_d_loss[-1], his_content_loss[-1], his_adversarial_loss[-1], samples_dir)
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
@@ -290,8 +290,8 @@ def train(discriminator: nn.Module,
     batches = len(train_prefetcher)
 
     # Print information of progress bar during training
-    batch_time = AverageMeter("Time", ":6.3f")
-    data_time = AverageMeter("Data", ":6.3f")
+    batch_time = AverageMeter("Batch_Time", ":6.3f")
+    train_time = AverageMeter("Train_Time", ":6.3f")
     content_losses = AverageMeter("Content loss", ":6.6f")
     adversarial_losses = AverageMeter("Adversarial loss", ":6.6f")
     d_hr_probabilities = AverageMeter("D(HR)", ":6.3f")
@@ -299,7 +299,7 @@ def train(discriminator: nn.Module,
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.4f")
     progress = ProgressMeter(batches,
-                             [batch_time, data_time,
+                             [train_time, batch_time,
                               content_losses, adversarial_losses,
                               d_hr_probabilities, d_sr_probabilities],
                              prefix=f"Epoch: [{epoch + 1}]")
@@ -316,12 +316,10 @@ def train(discriminator: nn.Module,
     batch_data = train_prefetcher.next()
 
     # Get the initialization training time
-    end = time.time()
+    startBatch = time.time()
+    startTrain = startBatch
 
     while batch_data is not None:
-        # Calculate the time it takes to load a batch of data
-        data_time.update(time.time() - end)
-
         # Transfer in-memory data to CUDA devices to speed up training
         lr = batch_data["lr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
         hr = batch_data["hr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
@@ -391,14 +389,14 @@ def train(discriminator: nn.Module,
         d_hr_probabilities.update(d_hr_probability.item(), lr.size(0))
         d_sr_probabilities.update(d_sr_probability.item(), lr.size(0))
 
-        psnr = psnr_model(sr, hr)
-        ssim = ssim_model(sr, hr)
-        psnres.update(psnr.item(), lr.size(0))
-        ssimes.update(ssim.item(), lr.size(0))
+        psnr = psnr_model(sr, hr).detach().cpu().numpy()
+        ssim = ssim_model(sr, hr).detach().cpu().numpy()
+        psnres.update(np.mean(psnr), lr.size(0))
+        ssimes.update(np.mean(ssim), lr.size(0))
 
         # Calculate the time it takes to fully train a batch of data
-        batch_time.update(time.time() - end)
-        end = time.time()
+        batch_time.update(time.time() - startBatch)
+        startBatch = time.time()
 
         # Write the data during training to the training log file
         if batch_index % config.print_frequency == 0:
@@ -416,8 +414,13 @@ def train(discriminator: nn.Module,
 
         # After training a batch of data, add 1 to the number of data batches to ensure that the terminal prints data normally
         batch_index += 1
-        train_package = [psnres.avg, ssimes.avg, d_hr_probabilities.avg, d_sr_probabilities.avg, content_losses.avg, adversarial_losses.avg]
-        return train_package
+
+    train_time.update(time.time() - startTrain)
+    # print metrics
+    progress.display_summary()
+
+    train_package = [psnres.avg, ssimes.avg, d_hr_probabilities.avg, d_sr_probabilities.avg, content_losses.avg, adversarial_losses.avg]
+    return train_package
 
 
 def validate(model: nn.Module,
@@ -441,10 +444,11 @@ def validate(model: nn.Module,
     """
     # Calculate how many batches of data are in each Epoch
     batches = len(data_prefetcher)
-    batch_time = AverageMeter("Time", ":6.3f")
+    batch_time = AverageMeter("Batch_Time", ":6.3f")
+    val_time = AverageMeter("Val_Time", ":6.3f")
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.4f")
-    progress = ProgressMeter(len(data_prefetcher), [batch_time, psnres, ssimes], prefix=f"{mode}: ")
+    progress = ProgressMeter(len(data_prefetcher), [val_time, batch_time, psnres, ssimes], prefix=f"{mode}: ")
 
     # Put the adversarial network model in validation mode
     model.eval()
@@ -457,7 +461,8 @@ def validate(model: nn.Module,
     batch_data = data_prefetcher.next()
 
     # Get the initialization test time
-    end = time.time()
+    startBatch = time.time()
+    startVal = startBatch
 
     with torch.no_grad():
         while batch_data is not None:
@@ -476,8 +481,8 @@ def validate(model: nn.Module,
             ssimes.update(ssim.item(), lr.size(0))
 
             # Calculate the time it takes to fully test a batch of data
-            batch_time.update(time.time() - end)
-            end = time.time()
+            batch_time.update(time.time() - startBatch)
+            startBatch = time.time()
 
             # Record training log information
             if batch_index % (batches // 5) == 0:
@@ -490,6 +495,7 @@ def validate(model: nn.Module,
             # terminal prints data normally
             batch_index += 1
 
+    val_time.update(time.time() - startVal)
     # print metrics
     progress.display_summary()
 
@@ -500,51 +506,6 @@ def validate(model: nn.Module,
         raise ValueError("Unsupported mode, please use `Valid` or `Test`.")
 
     return psnres.avg, ssimes.avg
-
-
-def plot(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, pathsave):
-    psnr = np.array(his_psnr)
-    plt.figure(1)
-    plt.plot(psnr[:, 0], 'r')
-    plt.plot(psnr[:, 1], 'y')
-    plt.plot(psnr[:, 2], 'g')
-    plt.legend(['train_psnr', 'valid_psnr', 'test_psnr'])
-    plt.xlabel('Iter')
-    plt.ylabel('PSNR score')
-    plt.savefig(os.path.join(pathsave, 'psnr.png'))
-
-    ssim = np.array(his_ssim)
-    plt.figure(2)
-    plt.plot(ssim[:, 0], 'r')
-    plt.plot(ssim[:, 1], 'y')
-    plt.plot(ssim[:, 2], 'g')
-    plt.legend(['train_ssim', 'valid_ssim', 'test_ssim'])
-    plt.xlabel('Iter')
-    plt.ylabel('SSIM score')
-    plt.savefig(os.path.join(pathsave, 'ssim.png'))
-
-    d_loss = np.array(his_d_loss)
-    plt.figure(3)
-    plt.plot(d_loss[:, 0], 'b')
-    plt.plot(d_loss[:, 1], 'g')
-    plt.legend(['train_d_hr_loss', 'train_d_sr_loss'])
-    plt.xlabel('Iter')
-    plt.ylabel('D Loss')
-    plt.savefig(os.path.join(pathsave, 'd_loss.png'))
-
-    plt.figure(4)
-    plt.plot(his_content_loss, 'r')
-    plt.legend(['Content Loss'])
-    plt.xlabel('Iters')
-    plt.ylabel('Content Loss')
-    plt.savefig(os.path.join(pathsave, 'content_loss.png'))
-
-    plt.figure(5)
-    plt.plot(his_adversarial_loss, 'r')
-    plt.legend(['Adversarial Loss'])
-    plt.xlabel('Iters')
-    plt.ylabel('Adversarial Loss')
-    plt.savefig(os.path.join(pathsave, 'adversarial_loss.png'))
 
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
@@ -578,6 +539,9 @@ class AverageMeter(object):
 
     def __str__(self):
         fmtstr = "{name} {val" + self.fmt + "} ({avg" + self.fmt + "})"
+        if self.name.split('_')[-1] == 'Time':
+            s = int(self.avg)
+            fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
         return fmtstr.format(**self.__dict__)
 
     def summary(self):
