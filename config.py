@@ -100,8 +100,8 @@ if mode == "train_srgan":
 
 if mode == "test":
     # Test data address
-    lr_dir = f"data/ImagenetCrop/testx4"
-    sr_dir = f"results/test/{exp_name}"
-    hr_dir = f"data/ImagenetCrop/test"
+    lr_dir = f"figure/x4"
+    sr_dir = f"figure/SR/{exp_name}"
+    hr_dir = f"figure/Original"
 
-    model_path = f"results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
+    model_path = f"results/SRResNet_baseline/g_epoch_x.pth.tar"
