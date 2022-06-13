@@ -126,7 +126,7 @@ def main():
                             os.path.join(results_dir, "g_last.pth.tar"))
         # plot
         plot3Resnet(his_psnr, his_ssim, his_pixel_loss, samples_dir)
-        saveHisResnet(his_psnr[-1], his_ssim[-1], his_pixel_loss[-1], samples_dir)
+        saveHisResnet(his_psnr[-1], his_ssim[-1], his_pixel_loss[-1], results_dir, samples_dir)
 
 def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets

@@ -9,8 +9,8 @@ import config
 import imgproc
 from model import Generator
 
-input_folder = ''
-results_dir = ''
+input_folder = 'figure/x4'
+results_dir = 'figure/SR'
 
 def main() -> None:
     # Initialize the super-resolution model
