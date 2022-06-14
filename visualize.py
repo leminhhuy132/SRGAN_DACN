@@ -117,7 +117,7 @@ def plotResnet(pathData, pathSave):
     plot3Resnet(his_psnr, his_ssim, his_pixel_loss, pathSave)
 
 
-def plotResnet(pathData, pathSave):
+def plotSRGAN(pathData, pathSave):
     df = pd.read_csv(pathData, index_col=0)
 
     his_psnr = df[df.columns[0:3]].to_numpy()
