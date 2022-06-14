@@ -401,7 +401,7 @@ class AverageMeter(object):
     def __str__(self):
         fmtstr = "{name} {val" + self.fmt + "} ({avg" + self.fmt + "})"
         if self.name.split('_')[-1] == 'Time':
-            s = round(self.avg, 2)
+            s = int(self.avg)
             fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
         return fmtstr.format(**self.__dict__)
 
@@ -411,7 +411,7 @@ class AverageMeter(object):
         elif self.summary_type is Summary.AVERAGE:
             fmtstr = "{name} {avg:.2f}"
             if self.name.split('_')[-1] == 'Time':
-                s = round(self.avg, 2)
+                s = int(self.avg)
                 fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
         elif self.summary_type is Summary.SUM:
             fmtstr = "{name} {sum:.2f}"
