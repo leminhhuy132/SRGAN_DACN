@@ -212,12 +212,11 @@ def train(model: nn.Module,
     # Calculate how many batches of data are in each Epoch
     batches = len(train_prefetcher)
     # Print information of progress bar during training
-    batch_time = AverageMeter("Batch_Time", ":6.3f")
-    train_time = AverageMeter("Train_Time", ":6.3f")
+    train_time = AverageMeter("Train_Time", ":6.3f", summary_type=Summary.SUM)
     losses = AverageMeter("Loss", ":6.6f")
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.4f")
-    progress = ProgressMeter(batches, [train_time, batch_time, losses, psnres, ssimes], prefix=f"Epoch: [{epoch + 1}]")
+    progress = ProgressMeter(batches, [losses, psnres, ssimes], prefix=f"Epoch: [{epoch + 1}]")
 
     # Put the generative network model in training mode
     model.train()
@@ -230,11 +229,9 @@ def train(model: nn.Module,
     batch_data = train_prefetcher.next()
 
     # Get the initialization training time
-    startBatch = time.time()
-    startTrain = startBatch
+    startTrain = time.time()
 
     while batch_data is not None:
-
         # Transfer in-memory data to CUDA devices to speed up training
         lr = batch_data["lr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
         hr = batch_data["hr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
@@ -261,10 +258,6 @@ def train(model: nn.Module,
         psnres.update(np.mean(psnr), lr.size(0))
         ssimes.update(np.mean(ssim), lr.size(0))
 
-        # Calculate the time it takes to fully train a batch of data
-        batch_time.update(time.time() - startBatch)
-        startBatch = time.time()
-
         # Write the data during training to the training log file
         if batch_index % config.print_frequency == 0:
             # Record loss during training and output to file
@@ -279,6 +272,7 @@ def train(model: nn.Module,
 
     train_time.update(time.time() - startTrain)
     # print metrics
+    progress = ProgressMeter(batches, [train_time, losses, psnres, ssimes], prefix=f"Epoch: [{epoch + 1}]")
     progress.display_summary()
 
     train_package = [psnres.avg, ssimes.avg, losses.avg]
@@ -306,11 +300,10 @@ def validate(model: nn.Module,
     """
     # Calculate how many batches of data are in each Epoch
     batches = len(data_prefetcher)
-    batch_time = AverageMeter("Batch_Time", ":6.3f")
-    val_time = AverageMeter("Val_Time", ":6.3f")
+    val_time = AverageMeter("Val_Time", ":6.3f", summary_type=Summary.SUM)
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.4f")
-    progress = ProgressMeter(len(data_prefetcher), [val_time, batch_time, psnres, ssimes], prefix=f"{mode}: ")
+    progress = ProgressMeter(len(data_prefetcher), [psnres, ssimes], prefix=f"{mode}: ")
 
     # Put the adversarial network model in validation mode
     model.eval()
@@ -323,8 +316,7 @@ def validate(model: nn.Module,
     batch_data = data_prefetcher.next()
 
     # Get the initialization test time
-    startBatch = time.time()
-    startVal = startBatch
+    startVal = time.time()
 
     with torch.no_grad():
         while batch_data is not None:
@@ -342,10 +334,6 @@ def validate(model: nn.Module,
             psnres.update(psnr.item(), lr.size(0))
             ssimes.update(ssim.item(), lr.size(0))
 
-            # Calculate the time it takes to fully test a batch of data
-            batch_time.update(time.time() - startBatch)
-            startBatch = time.time()
-
             # Record training log information
             if batch_index % (batches // 5) == 0:
                 progress.display(batch_index)
@@ -359,6 +347,7 @@ def validate(model: nn.Module,
 
     val_time.update(time.time() - startVal)
     # print metrics
+    progress = ProgressMeter(len(data_prefetcher), [val_time, psnres, ssimes], prefix=f"{mode}: ")
     progress.display_summary()
 
     if mode == "Valid" or mode == "Test":
@@ -400,7 +389,7 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
     def __str__(self):
-        fmtstr = "{name} {val" + self.fmt + "} ({avg" + self.fmt + "})"
+        fmtstr = "{name} {avg" + self.fmt + "}"
         if self.name.split('_')[-1] == 'Time':
             s = int(self.avg)
             fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
@@ -416,6 +405,9 @@ class AverageMeter(object):
                 fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
         elif self.summary_type is Summary.SUM:
             fmtstr = "{name} {sum:.2f}"
+            if self.name.split('_')[-1] == 'Time':
+                s = int(self.sum)
+                fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
         elif self.summary_type is Summary.COUNT:
             fmtstr = "{name} {count:.2f}"
         else:

@@ -293,7 +293,7 @@ def train(discriminator: nn.Module,
 
     # Print information of progress bar during training
     batch_time = AverageMeter("Batch_Time", ":6.3f")
-    train_time = AverageMeter("Train_Time", ":6.3f")
+    train_time = AverageMeter("Train_Time", ":6.3f", summary_type=Summary.SUM)
     content_losses = AverageMeter("Content loss", ":6.6f")
     adversarial_losses = AverageMeter("Adversarial loss", ":6.6f")
     d_hr_probabilities = AverageMeter("D(HR)", ":6.3f")
@@ -301,8 +301,7 @@ def train(discriminator: nn.Module,
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.4f")
     progress = ProgressMeter(batches,
-                             [train_time, batch_time,
-                              content_losses, adversarial_losses,
+                             [batch_time, content_losses, adversarial_losses,
                               d_hr_probabilities, d_sr_probabilities],
                              prefix=f"Epoch: [{epoch + 1}]")
 
@@ -326,7 +325,9 @@ def train(discriminator: nn.Module,
         lr = batch_data["lr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
         hr = batch_data["hr"].to(device=config.device, memory_format=torch.channels_last, non_blocking=True)
 
-        # Used for the output of the discriminator binary classification, the input sample is from the dataset (real sample) and marked as 1, and the input sample from the generator (fake sample) is marked as 0
+        # Used for the output of the discriminator binary classification, the input sample is from the
+        # dataset (real sample) and marked as 1, and the input sample from the generator (fake sample) is
+        # marked as 0
         real_label = torch.full([lr.size(0), 1], 1.0, dtype=lr.dtype, device=config.device)
         fake_label = torch.full([lr.size(0), 1], 0.0, dtype=lr.dtype, device=config.device)
 
@@ -342,7 +343,8 @@ def train(discriminator: nn.Module,
         with amp.autocast():
             hr_output = discriminator(hr)
             d_loss_hr = adversarial_criterion(hr_output, real_label)
-        # Call the gradient scaling function in the mixed precision API to backpropagate the gradient information of the real sample
+        # Call the gradient scaling function in the mixed precision API to backpropagate the gradient information
+        # of the real sample
         scaler.scale(d_loss_hr).backward()
 
         # Calculate the classification score of the discriminator model for fake samples
@@ -353,7 +355,8 @@ def train(discriminator: nn.Module,
             d_loss_sr = adversarial_criterion(sr_output, fake_label)
             # Calculate the total discriminator loss value
             d_loss = d_loss_sr + d_loss_hr
-        # Call the gradient scaling function in the mixed precision API to backpropagate the gradient information of the fake samples
+        # Call the gradient scaling function in the mixed precision API to backpropagate the gradient information
+        # of the fake samples
         scaler.scale(d_loss_sr).backward()
         # Improve the discriminator model's ability to classify real and fake samples
         scaler.step(d_optimizer)
@@ -368,20 +371,24 @@ def train(discriminator: nn.Module,
         # Initialize generator model gradients
         generator.zero_grad(set_to_none=True)
 
-        # Calculate the perceptual loss of the generator, mainly including pixel loss, feature loss and adversarial loss
+        # Calculate the perceptual loss of the generator, mainly including pixel loss, feature loss and
+        # adversarial loss
         with amp.autocast():
             content_loss = config.content_weight * content_criterion(sr, hr)
             adversarial_loss = config.adversarial_weight * adversarial_criterion(discriminator(sr), real_label)
             # Calculate the generator total loss value
             g_loss = content_loss + adversarial_loss
-        # Call the gradient scaling function in the mixed precision API to backpropagate the gradient information of the fake samples
+        # Call the gradient scaling function in the mixed precision API to backpropagate the gradient information
+        # of the fake samples
         scaler.scale(g_loss).backward()
-        # Encourage the generator to generate higher quality fake samples, making it easier to fool the discriminator
+        # Encourage the generator to generate higher quality fake samples, making it easier to fool the
+        # discriminator
         scaler.step(g_optimizer)
         scaler.update()
         # Finish training the generator model
 
-        # Calculate the score of the discriminator on real samples and fake samples, the score of real samples is close to 1, and the score of fake samples is close to 0
+        # Calculate the score of the discriminator on real samples and fake samples, the score of real samples is
+        # close to 1, and the score of fake samples is close to 0
         d_hr_probability = torch.sigmoid_(torch.mean(hr_output.detach()))
         d_sr_probability = torch.sigmoid_(torch.mean(sr_output.detach()))
 
@@ -414,11 +421,16 @@ def train(discriminator: nn.Module,
         # Preload the next batch of data
         batch_data = train_prefetcher.next()
 
-        # After training a batch of data, add 1 to the number of data batches to ensure that the terminal prints data normally
+        # After training a batch of data, add 1 to the number of data batches to ensure that the terminal prints
+        # data normally
         batch_index += 1
 
     train_time.update(time.time() - startTrain)
     # print metrics
+    progress = ProgressMeter(batches,
+                             [train_time, batch_time, content_losses, adversarial_losses,
+                              d_hr_probabilities, d_sr_probabilities],
+                             prefix=f"Epoch: [{epoch + 1}]")
     progress.display_summary()
 
     train_package = [psnres.avg, ssimes.avg, d_hr_probabilities.avg, d_sr_probabilities.avg, content_losses.avg, adversarial_losses.avg]
@@ -447,10 +459,10 @@ def validate(model: nn.Module,
     # Calculate how many batches of data are in each Epoch
     batches = len(data_prefetcher)
     batch_time = AverageMeter("Batch_Time", ":6.3f")
-    val_time = AverageMeter("Val_Time", ":6.3f")
+    val_time = AverageMeter("Val_Time", ":6.3f", summary_type=Summary.SUM)
     psnres = AverageMeter("PSNR", ":4.2f")
     ssimes = AverageMeter("SSIM", ":4.4f")
-    progress = ProgressMeter(len(data_prefetcher), [val_time, batch_time, psnres, ssimes], prefix=f"{mode}: ")
+    progress = ProgressMeter(len(data_prefetcher), [batch_time, psnres, ssimes], prefix=f"{mode}: ")
 
     # Put the adversarial network model in validation mode
     model.eval()
@@ -499,6 +511,7 @@ def validate(model: nn.Module,
 
     val_time.update(time.time() - startVal)
     # print metrics
+    progress = ProgressMeter(len(data_prefetcher), [val_time, batch_time, psnres, ssimes], prefix=f"{mode}: ")
     progress.display_summary()
 
     if mode == "Valid" or mode == "Test":
@@ -540,7 +553,7 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
     def __str__(self):
-        fmtstr = "{name} {val" + self.fmt + "} ({avg" + self.fmt + "})"
+        fmtstr = "{name} {avg" + self.fmt + "}"
         if self.name.split('_')[-1] == 'Time':
             s = int(self.avg)
             fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
@@ -556,6 +569,9 @@ class AverageMeter(object):
                 fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
         elif self.summary_type is Summary.SUM:
             fmtstr = "{name} {sum:.2f}"
+            if self.name.split('_')[-1] == 'Time':
+                s = int(self.sum)
+                fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
         elif self.summary_type is Summary.COUNT:
             fmtstr = "{name} {count:.2f}"
         else:

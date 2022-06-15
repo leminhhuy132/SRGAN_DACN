@@ -86,6 +86,7 @@ def saveHisResnet(his_psnr, his_ssim, his_pixel_loss, pathData, pathSave):
         data = np.array([data])
         data = pd.DataFrame(data, columns=col)
         df = pd.concat([df, data], ignore_index=True, axis=0)
+        df.replace(0, np.nan, inplace=True)
         df.to_csv(os.path.join(pathSave, 'hisResnetData.csv'))
     else:
         data = np.concatenate((his_psnr, his_ssim, his_pixel_loss), axis=1)
@@ -101,6 +102,7 @@ def saveHisSRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversari
         data = np.array([data])
         data = pd.DataFrame(data, columns=col)
         df = pd.concat([df, data], ignore_index=True, axis=0)
+        df.replace(0, np.nan, inplace=True)
         df.to_csv(os.path.join(pathSave, 'hisSRGANData.csv'))
     else:
         data = np.concatenate(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, axis=1)
