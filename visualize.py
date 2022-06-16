@@ -78,7 +78,7 @@ def plot3SRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial
     plt.savefig(os.path.join(pathsave, 'adversarial_loss.png'))
 
 
-def saveHisResnet(his_psnr, his_ssim, his_pixel_loss, pathData, pathSave):
+def saveHisResnet(his_psnr, his_ssim, his_pixel_loss, pathData):
     col = ['train_psnr', 'valid_psnr', 'test_psnr', 'train_ssim', 'valid_ssim', 'test_ssim', 'pixel_loss']
     if os.path.exists(os.path.join(pathData, 'hisResnetData.csv')):
         df = pd.read_csv(os.path.join(pathData, 'hisResnetData.csv'), index_col=0)
@@ -87,14 +87,14 @@ def saveHisResnet(his_psnr, his_ssim, his_pixel_loss, pathData, pathSave):
         data = pd.DataFrame(data, columns=col)
         df = pd.concat([df, data], ignore_index=True, axis=0)
         df.replace(0, np.nan, inplace=True)
-        df.to_csv(os.path.join(pathSave, 'hisResnetData.csv'))
+        df.to_csv(os.path.join(pathData, 'hisResnetData.csv'))
     else:
         data = np.concatenate((his_psnr, his_ssim, his_pixel_loss), axis=1)
         df = pd.DataFrame(data, columns=col)
-        df.to_csv(os.path.join(pathSave, 'hisResnetData.csv'))
+        df.to_csv(os.path.join(pathData, 'hisResnetData.csv'))
 
 
-def saveHisSRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, pathData, pathSave):
+def saveHisSRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, pathData):
     col = ['train_psnr', 'valid_psnr', 'test_psnr', 'train_ssim', 'valid_ssim', 'test_ssim', 'd_hr_loss', 'd_sr_loss', 'content_loss', 'adversarial_loss']
     if os.path.exists(os.path.join(pathData, 'hisSRGANData.csv')):
         df = pd.read_csv(os.path.join(pathData, 'hisSRGANData.csv'), index_col=0)
@@ -103,11 +103,11 @@ def saveHisSRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversari
         data = pd.DataFrame(data, columns=col)
         df = pd.concat([df, data], ignore_index=True, axis=0)
         df.replace(0, np.nan, inplace=True)
-        df.to_csv(os.path.join(pathSave, 'hisSRGANData.csv'))
+        df.to_csv(os.path.join(pathData, 'hisSRGANData.csv'))
     else:
         data = np.concatenate(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, axis=1)
         df = pd.DataFrame(data, columns=col)
-        df.to_csv(os.path.join(pathSave, 'hisSRGANData.csv'))
+        df.to_csv(os.path.join(pathData, 'hisSRGANData.csv'))
 
 
 def plotResnet(pathData, pathSave):
