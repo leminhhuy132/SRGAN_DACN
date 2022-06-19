@@ -72,12 +72,12 @@ if mode == "train_srgan":
 
     # Incremental training and migration training
     start_epoch = 0
-    resume = "results/SRGAN/srresnet-ImageNet-dbebcec6.pth.tar"
-    resume_d = "results/SRGAN/discriminator-ImageNet-6113867a.pth.tar"
-    resume_g = "results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
+    resume = ""
+    resume_d = "results/SRGAN_train/d_epoch_x.pth.tar"
+    resume_g = "results/SRGAN_train/d_epoch_x.pth.tar"
 
     # Total num epochs
-    epochs = 200000
+    epochs = 5
 
     # Feature extraction layer parameter configuration
     feature_model_extractor_node = "features.35"
@@ -93,7 +93,8 @@ if mode == "train_srgan":
     model_betas = (0.9, 0.999)
 
     # MultiStepLR scheduler parameter
-    lr_scheduler_step_size = epochs // 2
+    # lr_scheduler_step_size = epochs // 2
+    lr_scheduler_step_size = 100000
     lr_scheduler_gamma = 0.1
 
     print_frequency = 1000

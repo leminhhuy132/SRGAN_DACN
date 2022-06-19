@@ -99,7 +99,7 @@ def saveHisSRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversari
     col = ['train_psnr', 'valid_psnr', 'test_psnr', 'train_ssim', 'valid_ssim', 'test_ssim', 'd_hr_loss', 'd_sr_loss', 'content_loss', 'adversarial_loss']
     if os.path.exists(os.path.join(pathData, 'hisSRGANData.csv')):
         df = pd.read_csv(os.path.join(pathData, 'hisSRGANData.csv'), index_col=0)
-        data = np.concatenate(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, axis=None)
+        data = np.concatenate((his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss), axis=None)
         data = np.array([data])
         data = pd.DataFrame(data, columns=col)
         df = pd.concat([df, data], ignore_index=True, axis=0)
