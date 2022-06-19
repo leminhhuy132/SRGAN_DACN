@@ -215,7 +215,7 @@ def train(model: nn.Module,
     train_time = AverageMeter("Train_Time", ":6.3f", summary_type=Summary.SUM)
     losses = AverageMeter("Loss", ":6.6f")
     psnres = AverageMeter("PSNR", ":4.2f")
-    ssimes = AverageMeter("SSIM", ":4.4f")
+    ssimes = AverageMeter("SSIM", ":4.2f")
     progress = ProgressMeter(batches, [losses, psnres, ssimes], prefix=f"Epoch: [{epoch + 1}]")
 
     # Put the generative network model in training mode
@@ -302,7 +302,7 @@ def validate(model: nn.Module,
     batches = len(data_prefetcher)
     val_time = AverageMeter("Val_Time", ":6.3f", summary_type=Summary.SUM)
     psnres = AverageMeter("PSNR", ":4.2f")
-    ssimes = AverageMeter("SSIM", ":4.4f")
+    ssimes = AverageMeter("SSIM", ":4.2f")
     progress = ProgressMeter(len(data_prefetcher), [psnres, ssimes], prefix=f"{mode}: ")
 
     # Put the adversarial network model in validation mode
@@ -399,12 +399,12 @@ class AverageMeter(object):
         if self.summary_type is Summary.NONE:
             fmtstr = ""
         elif self.summary_type is Summary.AVERAGE:
-            fmtstr = "{name} {avg:.2f}"
+            fmtstr = "{name} {avg" + self.fmt + "}"
             if self.name.split('_')[-1] == 'Time':
                 s = int(self.avg)
                 fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
         elif self.summary_type is Summary.SUM:
-            fmtstr = "{name} {sum:.2f}"
+            fmtstr = "{name} {avg" + self.fmt + "}"
             if self.name.split('_')[-1] == 'Time':
                 s = int(self.sum)
                 fmtstr = "{name} " + str(datetime.timedelta(seconds=s))
