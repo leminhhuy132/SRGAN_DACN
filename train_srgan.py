@@ -77,7 +77,7 @@ def main():
         new_state_dict = {k: v for k, v in checkpoint["state_dict"].items() if k in model_state_dict.keys()}
         # Overwrite the pretrained model weights to the current model
         model_state_dict.update(new_state_dict)
-        # discriminator.load_state_dict(model_state_dict)
+        discriminator.load_state_dict(model_state_dict)
         # # Load the optimizer model
         # d_optimizer.load_state_dict(checkpoint["optimizer"])
         # # Load the scheduler model
@@ -97,7 +97,7 @@ def main():
         new_state_dict = {k: v for k, v in checkpoint["state_dict"].items() if k in model_state_dict.keys()}
         # Overwrite the pretrained model weights to the current model
         model_state_dict.update(new_state_dict)
-        # generator.load_state_dict(model_state_dict)
+        generator.load_state_dict(model_state_dict)
         # # Load the optimizer model
         # g_optimizer.load_state_dict(checkpoint["optimizer"])
         # # Load the scheduler model
@@ -172,8 +172,9 @@ def main():
                     "best_psnr": best_psnr,
                     "best_ssim": best_ssim,
                     "state_dict": generator.state_dict(),
-                    "optimizer": g_optimizer.state_dict(),
-                    "scheduler": g_scheduler.state_dict()},
+                    # "optimizer": g_optimizer.state_dict(),
+                    # "scheduler": g_scheduler.state_dict()
+                    },
                    os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
         if is_best:
             shutil.copyfile(os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"),

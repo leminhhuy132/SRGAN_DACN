@@ -34,7 +34,7 @@ def main() -> None:
     print(f"Load SRGAN model weights `{os.path.abspath(config.model_path)}` successfully.")
 
     # Create a folder of super-resolution experiment results
-    results_dir = os.path.join("results", "test", config.exp_name)
+    results_dir = config.sr_dir
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
 

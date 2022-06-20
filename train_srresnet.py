@@ -115,8 +115,9 @@ def main():
                     "best_psnr": best_psnr,
                     "best_ssim": best_ssim,
                     "state_dict": model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "scheduler": None},
+                    # "optimizer": optimizer.state_dict(),
+                    # "scheduler": None
+                    },
                    os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
         if is_best:
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
