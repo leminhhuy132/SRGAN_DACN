@@ -68,7 +68,7 @@ def main():
         model_state_dict.update(new_state_dict)
         model.load_state_dict(model_state_dict)
         # Load the optimizer model
-        optimizer.load_state_dict(checkpoint["optimizer"])
+        # optimizer.load_state_dict(checkpoint["optimizer"])
         print("Loaded pretrained model weights.")
 
     # Create a folder of super-resolution experiment results
@@ -115,8 +115,9 @@ def main():
                     "best_psnr": best_psnr,
                     "best_ssim": best_ssim,
                     "state_dict": model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "scheduler": None},
+                    # "optimizer": optimizer.state_dict(),
+                    # "scheduler": None
+                    },
                    os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"))
         if is_best:
             shutil.copyfile(os.path.join(samples_dir, f"g_epoch_{epoch + 1}.pth.tar"),
