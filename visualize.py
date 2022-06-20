@@ -78,31 +78,55 @@ def plot3SRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial
     plt.savefig(os.path.join(pathsave, 'adversarial_loss.png'))
 
 
-def saveHisResnet(his_psnr, his_ssim, his_pixel_loss, samples_dir):
+def saveHisResnet(his_psnr, his_ssim, his_pixel_loss, pathData):
     col = ['train_psnr', 'valid_psnr', 'test_psnr', 'train_ssim', 'valid_ssim', 'test_ssim', 'pixel_loss']
-    if os.path.exists(os.path.join(samples_dir, 'hisResnetData.csv')):
-        df = pd.read_csv(os.path.join(samples_dir, 'hisResnetData.csv'), index_col=0)
+    if os.path.exists(os.path.join(pathData, 'hisResnetData.csv')):
+        df = pd.read_csv(os.path.join(pathData, 'hisResnetData.csv'), index_col=0)
         data = np.concatenate((his_psnr, his_ssim, his_pixel_loss), axis=None)
         data = np.array([data])
         data = pd.DataFrame(data, columns=col)
         df = pd.concat([df, data], ignore_index=True, axis=0)
-        df.to_csv(os.path.join(samples_dir, 'hisResnetData.csv'))
+        df.replace(0, np.nan, inplace=True)
+        df.to_csv(os.path.join(pathData, 'hisResnetData.csv'))
     else:
-        data = np.concatenate((his_psnr, his_ssim, his_pixel_loss), axis=1)
+        data = np.concatenate((his_psnr, his_ssim, his_pixel_loss), axis=None)
+        data = np.array([data])
         df = pd.DataFrame(data, columns=col)
-        df.to_csv(os.path.join(samples_dir, 'hisResnetData.csv'))
+        df.to_csv(os.path.join(pathData, 'hisResnetData.csv'))
 
 
-def saveHisSRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, samples_dir):
+def saveHisSRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, pathData):
     col = ['train_psnr', 'valid_psnr', 'test_psnr', 'train_ssim', 'valid_ssim', 'test_ssim', 'd_hr_loss', 'd_sr_loss', 'content_loss', 'adversarial_loss']
-    if os.path.exists(os.path.join(samples_dir, 'hisSRGANData.csv')):
-        df = pd.read_csv(os.path.join(samples_dir, 'hisSRGANData.csv'), index_col=0)
-        data = np.concatenate(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, axis=None)
+    if os.path.exists(os.path.join(pathData, 'hisSRGANData.csv')):
+        df = pd.read_csv(os.path.join(pathData, 'hisSRGANData.csv'), index_col=0)
+        data = np.concatenate((his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss), axis=None)
         data = np.array([data])
         data = pd.DataFrame(data, columns=col)
         df = pd.concat([df, data], ignore_index=True, axis=0)
-        df.to_csv(os.path.join(samples_dir, 'hisSRGANData.csv'))
+        df.replace(0, np.nan, inplace=True)
+        df.to_csv(os.path.join(pathData, 'hisSRGANData.csv'))
     else:
-        data = np.concatenate(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, axis=1)
+        data = np.concatenate((his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss), axis=None)
+        data = np.array([data])
         df = pd.DataFrame(data, columns=col)
-        df.to_csv(os.path.join(samples_dir, 'hisSRGANData.csv'))
+        df.to_csv(os.path.join(pathData, 'hisSRGANData.csv'))
+
+
+def plotResnet(pathData, pathSave):
+    df = pd.read_csv(pathData, index_col=0)
+
+    his_psnr = df[df.columns[0:3]].to_numpy()
+    his_ssim = df[df.columns[3:6]].to_numpy()
+    his_pixel_loss = df[df.columns[6]].to_numpy()
+    plot3Resnet(his_psnr, his_ssim, his_pixel_loss, pathSave)
+
+
+def plotSRGAN(pathData, pathSave):
+    df = pd.read_csv(pathData, index_col=0)
+
+    his_psnr = df[df.columns[0:3]].to_numpy()
+    his_ssim = df[df.columns[3:6]].to_numpy()
+    his_d_loss = df[df.columns[6:8]].to_numpy()
+    his_content_loss = df[df.columns[8]].to_numpy()
+    his_adversarial_loss = df[df.columns[9]].to_numpy()
+    plot3SRGAN(his_psnr, his_ssim, his_d_loss, his_content_loss, his_adversarial_loss, pathSave)

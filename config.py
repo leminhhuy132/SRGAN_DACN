@@ -30,9 +30,9 @@ only_test_y_channel = True
 # Image magnification factor
 upscale_factor = 4
 # Current configuration parameter method
-mode = "train_srresnet"
+mode = "train_srgan"
 # Experiment name, easy to save weights and log files
-exp_name = "SRResNet_baseline"
+exp_name = "SRGAN_train"
 
 if mode == "train_srresnet":
     # Dataset address
@@ -72,12 +72,12 @@ if mode == "train_srgan":
 
     # Incremental training and migration training
     start_epoch = 0
-    resume = "results/SRGAN/srresnet-ImageNet-dbebcec6.pth.tar"
-    resume_d = "results/SRGAN/discriminator-ImageNet-6113867a.pth.tar"
-    resume_g = "results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
+    resume = ""
+    resume_d = "results/SRGAN_train/d_epoch_x.pth.tar"
+    resume_g = "results/SRGAN_train/d_epoch_x.pth.tar"
 
     # Total num epochs
-    epochs = 200000
+    epochs = 5
 
     # Feature extraction layer parameter configuration
     feature_model_extractor_node = "features.35"
@@ -93,15 +93,16 @@ if mode == "train_srgan":
     model_betas = (0.9, 0.999)
 
     # MultiStepLR scheduler parameter
-    lr_scheduler_step_size = epochs // 2
+    # lr_scheduler_step_size = epochs // 2
+    lr_scheduler_step_size = 100000
     lr_scheduler_gamma = 0.1
 
     print_frequency = 1000
 
 if mode == "test":
     # Test data address
-    lr_dir = f"data/ImagenetCrop/testx4"
-    sr_dir = f"results/test/{exp_name}"
-    hr_dir = f"data/ImagenetCrop/test"
+    lr_dir = f"figure/x4"
+    sr_dir = f"figure/SR/{exp_name}"
+    hr_dir = f"figure/Original"
 
-    model_path = f"results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
+    model_path = f"results/SRResNet_baseline/g_epoch_x.pth.tar"

@@ -138,7 +138,6 @@ samples/
 *.JPEG
 *.jpeg
 *.bmp
-*.png
 *.mp4
 *.zip
 *.csv
@@ -147,5 +146,3 @@ samples/
 *.pdf
 *.odt
 *.doc
-
-./scripts/gom2.py
