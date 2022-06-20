@@ -428,7 +428,8 @@ def train(discriminator: nn.Module,
     train_time.update(time.time() - startTrain)
     # print metrics
     progress = ProgressMeter(batches,
-                             [train_time, batch_time, content_losses, adversarial_losses,
+                             [train_time, batch_time, psnres, ssimes,
+                              content_losses, adversarial_losses,
                               d_hr_probabilities, d_sr_probabilities],
                              prefix=f"Epoch: [{epoch + 1}]")
     progress.display_summary()
