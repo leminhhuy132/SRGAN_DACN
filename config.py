@@ -30,9 +30,9 @@ only_test_y_channel = True
 # Image magnification factor
 upscale_factor = 4
 # Current configuration parameter method
-mode = "train_srresnet"
+mode = "train_srgan"
 # Experiment name, easy to save weights and log files
-exp_name = "SRResNet_baseline"
+exp_name = "SRGAN_train"
 
 if mode == "train_srresnet":
     # Dataset address
