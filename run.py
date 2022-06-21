@@ -11,6 +11,8 @@ from model import Generator
 
 input_folder = 'figure/x4'
 results_dir = 'figure/SR'
+model_path = ''
+
 
 def main() -> None:
     # Initialize the super-resolution model
@@ -18,9 +20,9 @@ def main() -> None:
     print("Build SRGAN model successfully.")
 
     # Load the super-resolution model weights
-    checkpoint = torch.load(config.model_path, map_location=lambda storage, loc: storage)
+    checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
     model.load_state_dict(checkpoint["state_dict"])
-    print(f"Load SRGAN model weights `{os.path.abspath(config.model_path)}` successfully.")
+    print(f"Load SRGAN model weights `{os.path.abspath(model_path)}` successfully.")
 
     # Create a folder of super-resolution experiment results
     # results_dir = os.path.join("results", "test", config.exp_name)

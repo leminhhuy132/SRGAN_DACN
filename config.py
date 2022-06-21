@@ -99,7 +99,7 @@ if mode == "train_srgan":
 
     print_frequency = 1000
 
-if mode == "test":
+if mode == "validate":
     # Test data address
     lr_dir = f"figure/x4"
     sr_dir = f"figure/SR/{exp_name}"
