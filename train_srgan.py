@@ -165,8 +165,9 @@ def main():
                     "best_psnr": best_psnr,
                     "best_ssim": best_ssim,
                     "state_dict": discriminator.state_dict(),
-                    "optimizer": d_optimizer.state_dict(),
-                    "scheduler": d_scheduler.state_dict()},
+                    # "optimizer": d_optimizer.state_dict(),
+                    # "scheduler": d_scheduler.state_dict()
+                    },
                    os.path.join(samples_dir, f"d_epoch_{epoch + 1}.pth.tar"))
         torch.save({"epoch": epoch + 1,
                     "best_psnr": best_psnr,
