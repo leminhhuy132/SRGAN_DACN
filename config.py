@@ -30,9 +30,9 @@ only_test_y_channel = True
 # Image magnification factor
 upscale_factor = 4
 # Current configuration parameter method
-mode = "train_srgan"
+mode = "validate"
 # Experiment name, easy to save weights and log files
-exp_name = "SRGAN_train"
+exp_name = "SRGAN19"
 
 if mode == "train_srresnet":
     # Dataset address
@@ -99,10 +99,14 @@ if mode == "train_srgan":
 
     print_frequency = 1000
 
-if mode == "test":
+if mode == "validate":
+    exp_name = "SRRESNET100"
     # Test data address
-    lr_dir = f"figure/x4"
-    sr_dir = f"figure/SR/{exp_name}"
-    hr_dir = f"figure/Original"
+    lr_dir = f"data/x4"
+    sr_dir = f"results/test/{exp_name}"
+    hr_dir = f"data/Original"
 
-    model_path = f"results/SRResNet_baseline/g_epoch_x.pth.tar"
+    # model_path = f"results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
+    # model_path = f"results/SRGAN/srresnet-ImageNet-dbebcec6.pth.tar"
+    model_path = f"results/SRResNet_baseline100/g_epoch_100.pth.tar"
+    # model_path = f"results/SRGAN_train/g_epoch_19.pth.tar"
