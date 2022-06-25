@@ -4,8 +4,8 @@ from natsort import natsorted
 
 original_dir = 'data/Original'
 data_dir = ''
-results_dir = 'results/test/SRRESNET'
-results_dir2 = 'results/test/SRRESNET100'
+results_dir = 'results/test/SRGAN'
+results_dir2 = 'results/test/SRGAN19'
 save_dir = ''
 
 

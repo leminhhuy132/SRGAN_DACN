@@ -19,4 +19,4 @@ os.system("python ./prepare_dataset.py --images_dir ../data/Textdata2/train --ou
 # Split train and valid
 os.system("python ./split_train_valid_dataset.py --train_images_dir ../data/Textdata2/trainSRGAN --valid_images_dir ../data/Textdata2/validSRGAN --valid_samples_ratio 0.2")
 
-os.system("python ./create_LRdata.py --images_dir ../data/Textdata2/test --output_dir ../data/Textdata2/testx4 --num_workers 1 --upscale_factor 4")
+os.system("python ./create_LRdata.py --images_dir ../data/Original --output_dir ../data/x4 --num_workers 1 --upscale_factor 4")

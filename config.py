@@ -100,7 +100,7 @@ if mode == "train_srgan":
     print_frequency = 1000
 
 if mode == "validate":
-    exp_name = "SRRESNET100"
+    exp_name = "SRGAN19"
     # Test data address
     lr_dir = f"data/x4"
     sr_dir = f"results/test/{exp_name}"
@@ -108,5 +108,5 @@ if mode == "validate":
 
     # model_path = f"results/SRGAN/srgan-ImageNet-839a8bfc.pth.tar"
     # model_path = f"results/SRGAN/srresnet-ImageNet-dbebcec6.pth.tar"
-    model_path = f"results/SRResNet_baseline100/g_epoch_100.pth.tar"
-    # model_path = f"results/SRGAN_train/g_epoch_19.pth.tar"
+    # model_path = f"results/SRResNet_baseline100/g_epoch_100.pth.tar"
+    model_path = f"results/SRGAN_train/g_epoch_19.pth.tar"
