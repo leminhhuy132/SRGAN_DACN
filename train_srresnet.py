@@ -68,7 +68,7 @@ def main():
         model_state_dict.update(new_state_dict)
         model.load_state_dict(model_state_dict)
         # Load the optimizer model
-        optimizer.load_state_dict(checkpoint["optimizer"])
+        # optimizer.load_state_dict(checkpoint["optimizer"])
         print("Loaded pretrained model weights.")
 
     # Create a folder of super-resolution experiment results
