@@ -90,8 +90,12 @@ def main() -> None:
         cv2.imwrite(sr_image_path, sr_image)
 
         # Cal IQA metrics
-        psnr_metrics += psnr(sr_tensor, hr_tensor).item()
-        ssim_metrics += ssim(sr_tensor, hr_tensor).item()
+        psnr_score = psnr(sr_tensor, hr_tensor).item()
+        ssim_score = ssim(sr_tensor, hr_tensor).item()
+        print("PSNR: ", psnr_score)
+        print('SSIM: ', ssim_score)
+        psnr_metrics += psnr_score
+        ssim_metrics += ssim_score
 
     # Calculate the average value of the sharpness evaluation index,
     # and all index range values are cut according to the following values
@@ -100,8 +104,8 @@ def main() -> None:
     avg_ssim = 1 if ssim_metrics / total_files > 1 else ssim_metrics / total_files
     avg_psnr = 100 if psnr_metrics / total_files > 100 else psnr_metrics / total_files
 
-    print(f"PSNR: {avg_psnr:4.2f} dB\n"
-          f"SSIM: {avg_ssim:4.4f} u")
+    print(f"PSNR AVG: {avg_psnr:4.2f} dB\n"
+          f"SSIM AVG: {avg_ssim:4.4f} u")
 
 
 if __name__ == "__main__":
