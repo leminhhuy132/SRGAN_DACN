@@ -100,7 +100,6 @@ if mode == "train_srgan":
     print_frequency = 1000
 
 if mode == "validate":
-    exp_name = "SRGAN19"
     # Test data address
     lr_dir = f"data/x4"
     sr_dir = f"results/test/{exp_name}"
